@@ -1,16 +1,22 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database.js';
-import type { InferAttributes, InferCreationAttributes } from 'sequelize';
+import type { InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare telefono: string;
   declare nombreCompleto: string | null;
   declare email: string | null;
-  declare activo: boolean;
-  declare esAdmin: boolean;
-  declare registroCompleto: boolean;
-  declare pasoRegistro: number;
+  
+  declare activo: CreationOptional<boolean>;
+  declare esAdmin: CreationOptional<boolean>;
+  declare registroCompleto: CreationOptional<boolean>;
+  declare pasoRegistro: CreationOptional<number>;
+  
   declare roleId: number | null;
+
+  // Timestamps declarados
+  declare createdAt: CreationOptional<Date>;
+  declare updatedAt: CreationOptional<Date>;
 }
 
 User.init({
@@ -25,11 +31,12 @@ User.init({
   email: {
     type: DataTypes.STRING,
     allowNull: true,
+    unique: true, 
     validate: { isEmail: true }
   },
   activo: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true, // Al registrarse están activos por defecto
+    defaultValue: true,
   },
   esAdmin: {
     type: DataTypes.BOOLEAN,
@@ -46,9 +53,19 @@ User.init({
   roleId: {
     type: DataTypes.INTEGER,
     allowNull: true,
+  },
+  // AGREGAMOS ESTO PARA QUE TS NO SE QUEJE:
+  // No necesitan configuración porque timestamps: true los maneja,
+  // pero deben estar presentes en el objeto para cumplir con el contrato de InferAttributes.
+  createdAt: {
+    type: DataTypes.DATE,
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
   }
 }, { 
   sequelize, 
   modelName: 'user',
-  tableName: 'usuarios'
+  tableName: 'usuarios',
+  timestamps: true 
 });
