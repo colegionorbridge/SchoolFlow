@@ -1,44 +1,30 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
+    // --- Layout de archivos (ACTIVALOS) ---
+    "rootDir": "./src",      // Donde escribís el código .ts
+    "outDir": "./dist",     // Donde se genera el código .js final
 
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    // --- Configuración de Entorno ---
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext", // Agregá esta línea para que reconozca bien los imports
+    "target": "ESNext",
+    
+    // --- Tipos de Node (IMPORTANTE) ---
+    "types": ["node"], // Asegurate de tener instalado: npm install -D @types/node
 
-    // Other Outputs
+    // --- Calidad y Strict ---
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true, // Agregá esto para que las librerías viejas funcionen con TS
+    
+    // El resto lo podés dejar como está, pero estos son los vitales para arrancar.
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-
-    // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    "isolatedModules": true
+  },
+  "include": ["src/**/*"],    // Le decimos a TS que solo mire lo que está en /src
+  "exclude": ["node_modules"] // Que ignore la carpeta de librerías
 }
