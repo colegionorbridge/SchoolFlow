@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# TypeScript (ignora los archivos .js generados si compilas a una carpeta)
+dist/
+out/
+build/
+
+# Logs de errores
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno / Secretos
+.env
+.env.local
+
+# Archivos de sistema y editores
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
