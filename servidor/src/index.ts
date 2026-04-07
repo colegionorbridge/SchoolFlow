@@ -7,7 +7,7 @@ import { sequelize } from './models/models.js';
  * INICIALIZACIÓN DE SERVIDORES
  */
 const httpServer = createServer(app);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4001;
 
 // Inicializamos los Sockets pasándole el servidor HTTP
 initSocket(httpServer);
