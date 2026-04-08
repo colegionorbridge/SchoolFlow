@@ -3,33 +3,23 @@ import { User } from './User.js';
 import { Sector } from './Sector.js';
 import { Role } from './Role.js';
 import { UserSector } from './UserSector.js';
+import { Ticket } from './Ticket.js'; // <--- Importamos el nuevo modelo
 
 /**
- * CONFIGURACIÓN DE RELACIONES (Asociaciones)
+ * CONFIGURACIÓN DE RELACIONES
  */
 
 // 1. Relación Usuario - Rol (Muchos a Uno)
-// Un usuario tiene UN rol. Un rol puede pertenecer a MUCHOS usuarios.
-User.belongsTo(Role, { 
-  foreignKey: 'roleId', 
-  as: 'rol' 
-});
-Role.hasMany(User, { 
-  foreignKey: 'roleId',
-  as: 'usuarios'
-});
+User.belongsTo(Role, { foreignKey: 'roleId', as: 'rol' });
+Role.hasMany(User, { foreignKey: 'roleId', as: 'usuarios' });
 
 // 2. Relación Usuario - Sector (Muchos a Muchos)
-// Un usuario puede estar en varios sectores (ej: Primaria y Secundaria).
-// Un sector tiene a muchos usuarios (el personal de ese nivel).
-// Usamos la tabla intermedia UserSector que definimos antes.
 User.belongsToMany(Sector, { 
   through: UserSector, 
-  foreignKey: 'userTelefono', // FK hacia la PK de User
-  otherKey: 'sectorId',       // FK hacia la PK de Sector
+  foreignKey: 'userTelefono', 
+  otherKey: 'sectorId',
   as: 'sectores' 
 });
-
 Sector.belongsToMany(User, { 
   through: UserSector, 
   foreignKey: 'sectorId',
@@ -37,14 +27,22 @@ Sector.belongsToMany(User, {
   as: 'personal' 
 });
 
-/**
- * EXPORTACIÓN
- * Exportamos todo desde aquí para centralizar el acceso a la DB.
- */
+// 3. NUEVA: Relación Usuario - Ticket (Uno a Muchos)
+// Un usuario crea muchos tickets. Un ticket es de UN usuario.
+User.hasMany(Ticket, {
+  foreignKey: 'userTelefono',
+  as: 'misTickets'
+});
+Ticket.belongsTo(User, {
+  foreignKey: 'userTelefono',
+  as: 'autor'
+});
+
 export {
   sequelize,
   User,
   Sector,
   Role,
-  UserSector
+  UserSector,
+  Ticket // <--- Exportamos Ticket para usarlo en el Bot
 };
