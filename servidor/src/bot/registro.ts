@@ -1,4 +1,4 @@
-import { User, Sector, UserSector } from '../models/models.js';
+import { User, Sector, UserSector, Role } from '../models/models.js';
 
 export const manejarRegistro = async (msg: any, user: any, telefono: string) => {
     const texto = msg.body.trim();
@@ -22,23 +22,22 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
             await user.save();
 
             const sectores = await Sector.findAll();
-            const lista = sectores.map((s, i) => `*${i + 1}.* ${s.nombre}`).join('\n');
+            const listaSectores = sectores.map((s, i) => `*${i + 1}.* ${s.nombre}`).join('\n');
 
-            await msg.reply(`Un gusto, ${texto}.\n\nSeleccioná tu **Sector** enviando el número correspondiente:\n\n${lista}`);
+            await msg.reply(`Un gusto, ${texto}.\n\nSeleccioná tu **Sector** enviando el número correspondiente:\n\n${listaSectores}`);
             break;
 
         case 2: // GUARDAR SECTOR ELEGIDO EN CONTEXT
-            const seleccion = parseInt(texto) - 1;
+            const selSector = parseInt(texto) - 1;
             const todosLosSectores = await Sector.findAll();
 
-            if (isNaN(seleccion) || !todosLosSectores[seleccion]) {
-                await msg.reply('❌ Selección inválida. Por favor, enviá solo el número (ej: 1).');
+            if (isNaN(selSector) || !todosLosSectores[selSector]) {
+                await msg.reply('❌ Selección inválida. Por favor, enviá solo el número del sector.');
                 return;
             }
 
-            const sectorElegido = todosLosSectores[seleccion];
+            const sectorElegido = todosLosSectores[selSector];
             
-            // Usamos el campo JSON 'context' para persistir la elección
             user.context = {
                 registro: {
                     sectorId: sectorElegido.id,
@@ -47,6 +46,7 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
             };
             
             user.pasoRegistro = 3;
+            user.changed('context', true); 
             await user.save(); 
 
             await msg.reply(`Elegiste **${sectorElegido.nombre}**.\n\nAhora, ingresá el **Código de Acceso** para este sector:`);
@@ -54,8 +54,6 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
 
         case 3: // VALIDACIÓN DE CÓDIGO VS SECTOR GUARDADO
             const codigoIngresado = texto.toUpperCase().trim();
-            
-            // Recuperamos la info del JSON context de forma segura
             const datosRegistro = user.context?.registro;
 
             if (!datosRegistro?.sectorId) {
@@ -67,44 +65,67 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
 
             const sectorAValidar = await Sector.findByPk(datosRegistro.sectorId);
 
-            // Validamos que el código pertenezca al sector que el usuario eligió antes
             if (!sectorAValidar || codigoIngresado !== sectorAValidar.codigoAcceso.toUpperCase().trim()) {
                 await msg.reply(`❌ **Código incorrecto** para el sector ${datosRegistro.nombreSector}.\n\nPor favor, verificalo e intentalo de nuevo:`);
                 return;
             }
 
-            // ÉXITO: Vinculamos al usuario con el sector en la tabla intermedia
             try {
                 await UserSector.create({
                     userTelefono: user.telefono,
                     sectorId: sectorAValidar.id
                 });
             } catch (error) {
-                console.log("Aviso: El usuario ya estaba vinculado o error en tabla intermedia");
+                console.log("Aviso: El usuario ya estaba vinculado.");
             }
 
-            // Limpiamos la parte de 'registro' del contexto para dejarlo prolijo
-            user.context = { ...user.context, registro: null }; 
             user.pasoRegistro = 4;
             await user.save();
             
-            await msg.reply('✅ **Código verificado correctamente.**\n\nPor último, ingresá tu **Correo Institucional** (@norbridge.edu.ar):');
+            await msg.reply('✅ **Código verificado correctamente.**\n\nAhora, ingresá tu **Correo Institucional** (@norbridge.edu.ar):');
             break;
 
-        case 4: // VALIDACIÓN DE CORREO Y CIERRE
+        case 4: // VALIDACIÓN DE CORREO Y LISTAR ROLES
             const correo = texto.toLowerCase();
 
-            if (!correo.endsWith('@norbridge.edu.ar')) {
-                await msg.reply('❌ El correo debe ser institucional y terminar en **@norbridge.edu.ar**. Reintentá:');
+            if (!correo.endsWith('@colegionorbridge.edu.ar')) {
+                await msg.reply('❌ El correo debe ser institucional (@norbridge.edu.ar). Reintentá:');
                 return;
             }
 
             user.email = correo;
-            user.pasoRegistro = 5; // Estado final para habilitar IA
-            user.registroCompleto = true;
+            user.pasoRegistro = 5; // Saltamos a la selección de Rol
             await user.save();
 
-            await msg.reply('🎉 **¡Registro completado con éxito!**\n\nYa podés hacerme cualquier consulta técnica sobre soporte, redes o PCs.');
+            // Buscamos los roles disponibles para que el usuario elija
+            const roles = await Role.findAll();
+            const listaRoles = roles.map((r, i) => `*${i + 1}.* ${r.nombre}`).join('\n');
+
+            await msg.reply(`Excelente. Por último, seleccioná tu **Rol** en el colegio:\n\n${listaRoles}`);
+            break;
+
+        case 5: // ASIGNACIÓN DE ROL Y FINALIZACIÓN
+            const selRol = parseInt(texto) - 1;
+            const todosLosRoles = await Role.findAll();
+
+            if (isNaN(selRol) || !todosLosRoles[selRol]) {
+                await msg.reply('❌ Selección inválida. Por favor, enviá el número del rol correspondiente.');
+                return;
+            }
+
+            const rolElegido = todosLosRoles[selRol];
+
+            user.roleId = rolElegido.id;
+            user.pasoRegistro = 6; // Estado final
+            user.registroCompleto = true;
+            
+            // Limpiamos el contexto de registro definitivamente
+            user.context = { ...user.context, registro: null }; 
+            user.changed('context', true);
+
+            await user.save();
+
+            await msg.reply(`🎉 **¡Registro completado!**\n\nBienvenido/a, ${user.nombreCompleto}. Ya podés reportar incidencias o hacerme consultas técnicas.`);
             break;
 
         default:
