@@ -104,7 +104,7 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
             await msg.reply(`Excelente. Por último, seleccioná tu **Rol** en el colegio:\n\n${listaRoles}`);
             break;
 
-        case 5: // ASIGNACIÓN DE ROL Y FINALIZACIÓN
+        case 5: // ASIGNACIÓN DE ROL (¿Pide código o finaliza?)
             const selRol = parseInt(texto) - 1;
             const todosLosRoles = await Role.findAll();
 
@@ -115,17 +115,59 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
 
             const rolElegido = todosLosRoles[selRol];
 
-            user.roleId = rolElegido.id;
-            user.pasoRegistro = 6; // Estado final
-            user.registroCompleto = true;
-            
-            // Limpiamos el contexto de registro definitivamente
-            user.context = { ...user.context, registro: null }; 
-            user.changed('context', true);
+            // SI EL ROL TIENE CÓDIGO DE ACCESO (EJ: DIRECTIVO)
+            if (rolElegido.codigoAcceso) {
+                user.context = { 
+                    ...user.context, 
+                    rolPendienteId: rolElegido.id,
+                    nombreRolPendiente: rolElegido.nombre 
+                };
+                user.pasoRegistro = 6; // Vamos al nuevo paso de validación de rol
+                user.changed('context', true);
+                await user.save();
 
+                await msg.reply(`⚠️ El rol **${rolElegido.nombre}** requiere un código de autorización adicional.\n\nPor favor, ingresalo:`);
+            } else {
+                // ROL LIBRE (EJ: DOCENTE) - FINALIZAMOS
+                user.roleId = rolElegido.id;
+                user.pasoRegistro = 7; // Estado final
+                user.registroCompleto = true;
+                user.context = { ...user.context, registro: null }; 
+                user.changed('context', true);
+                await user.save();
+
+                await msg.reply(`🎉 **¡Registro completado!**\n\nBienvenido/a, ${user.nombreCompleto}. Ya podés reportar incidencias.`);
+            }
+            break;
+
+        case 6: // VALIDACIÓN DE CÓDIGO DE ROL
+            const codigoRolIngresado = texto.toUpperCase().trim();
+            const rolIdPendiente = user.context?.rolPendienteId;
+
+            if (!rolIdPendiente) {
+                await msg.reply('❌ Error de sesión. Volvé a elegir el rol.');
+                user.pasoRegistro = 5;
+                await user.save();
+                return;
+            }
+
+            const rolAValidar = await Role.findByPk(rolIdPendiente);
+
+            if (!rolAValidar || codigoRolIngresado !== rolAValidar.codigoAcceso?.toUpperCase().trim()) {
+                await msg.reply(`❌ **Código de rol incorrecto**.\n\nSi no tenés el código, elegí otro rol o contactá a soporte técnico:`);
+                // Opcional: Podés devolverlo al paso 5 para que elija otro
+                return;
+            }
+
+            // ÉXITO: Código de rol correcto
+            user.roleId = rolAValidar.id;
+            user.pasoRegistro = 7; // Estado final
+            user.registroCompleto = true;
+            user.context = { ...user.context, registro: null, rolPendienteId: null }; 
+            user.changed('context', true);
             await user.save();
 
-            await msg.reply(`🎉 **¡Registro completado!**\n\nBienvenido/a, ${user.nombreCompleto}. Ya podés reportar incidencias o hacerme consultas técnicas.`);
+            await msg.reply(`✅ **Código de rol verificado.**\n\n🎉 **¡Registro completado!** Bienvenido/a al sistema, ${user.nombreCompleto}.`);
             break;
 
         default:

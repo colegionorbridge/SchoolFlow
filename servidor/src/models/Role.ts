@@ -5,6 +5,7 @@ import type { InferAttributes, InferCreationAttributes, CreationOptional } from 
 export class Role extends Model<InferAttributes<Role>, InferCreationAttributes<Role>> {
   declare id: CreationOptional<number>;
   declare nombre: string; // Ejemplo: 'Docente', 'Mantenimiento', 'Directivo'
+  declare codigoAcceso: string | null; // Si es null, cualquiera puede unirse
 }
 
 Role.init({
@@ -17,6 +18,10 @@ Role.init({
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
+  },
+  codigoAcceso: { 
+    type: DataTypes.STRING, 
+    allowNull: true // <-- NULL significa que cualquiera puede unirse
   }
 }, { 
   sequelize, 
