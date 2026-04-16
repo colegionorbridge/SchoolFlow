@@ -15,12 +15,11 @@ export const handleIncomingMessage = async (msg: any) => {
             ]
         }) as any;
 
-        // 2. Lógica de registro (Pasos 0 a 4)
-        if (!user || (user.pasoRegistro < 5 && !user.esAdmin)) {
-            await manejarRegistro(msg, user, telefono);
-            return;
-        }
-
+        // 2. Lógica de registro (Pasos 0 a 5)
+      if (!user || (!user.registroCompleto && !user.esAdmin)) {
+    await manejarRegistro(msg, user, telefono);
+    return;
+}
         // --- 3. FLUJO CON IA ---
         const chat = await msg.getChat();
         const mensajesPrevios = await chat.fetchMessages({ limit: 10 });
