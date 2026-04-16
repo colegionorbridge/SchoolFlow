@@ -46,7 +46,7 @@ async function seed() {
 
         // 2. Cargar Sectores
         console.log('\n--- Verificando Sectores ---');
-        const sectoresNombres = ['Inicial', 'Primaria', 'Secundaria', 'Apoyo', 'Administración'];
+        const sectoresNombres = ['Inicial', 'Primaria', 'Secundaria', 'Multi Sector',];
         
         for (const nombre of sectoresNombres) {
             const [sector, created] = await Sector.findOrCreate({ 

@@ -1,3 +1,14 @@
-2026/04/13-10:15:10.188 45c0 Reusing MANIFEST C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/04/13-10:15:10.201 45c0 Recovering log #79
-2026/04/13-10:15:10.274 45c0 Reusing old log C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000079.log 
+2026/04/15-14:56:05.353 204c Reusing MANIFEST C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/15-14:56:05.389 204c Recovering log #84
+2026/04/15-14:56:05.404 204c Reusing old log C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000084.log 
+2026/04/15-14:56:14.111 204c Level-0 table #90: started
+2026/04/15-14:56:14.184 204c Level-0 table #90: 1050077 bytes OK
+2026/04/15-14:56:14.198 204c Delete type=0 #84
+2026/04/15-14:56:14.704 1680 Compacting 1@1 + 2@2 files
+2026/04/15-14:56:15.017 1680 Generated table #91@1: 53647 keys, 2257830 bytes
+2026/04/15-14:56:15.057 1680 Generated table #92@1: 28107 keys, 1677781 bytes
+2026/04/15-14:56:15.058 1680 Compacted 1@1 + 2@2 files => 3935611 bytes
+2026/04/15-14:56:15.059 1680 compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/04/15-14:56:15.060 1680 Delete type=2 #86
+2026/04/15-14:56:15.060 1680 Delete type=2 #87
+2026/04/15-14:56:15.060 1680 Delete type=2 #90

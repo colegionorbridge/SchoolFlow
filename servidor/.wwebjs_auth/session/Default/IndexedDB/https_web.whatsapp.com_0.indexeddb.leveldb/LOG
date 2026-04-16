@@ -1,14 +1,3 @@
-2026/04/13-10:32:26.358 1fb8 Reusing MANIFEST C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/04/13-10:32:26.369 1fb8 Recovering log #79
-2026/04/13-10:32:26.510 1fb8 Reusing old log C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000079.log 
-2026/04/13-10:52:46.400 88c Level-0 table #85: started
-2026/04/13-10:52:46.698 88c Level-0 table #85: 1504105 bytes OK
-2026/04/13-10:52:46.715 88c Delete type=0 #79
-2026/04/13-10:52:46.734 88c Compacting 1@1 + 2@2 files
-2026/04/13-10:52:46.975 88c Generated table #86@1: 52680 keys, 2259839 bytes
-2026/04/13-10:52:47.096 88c Generated table #87@1: 27566 keys, 1636362 bytes
-2026/04/13-10:52:47.097 88c Compacted 1@1 + 2@2 files => 3896201 bytes
-2026/04/13-10:52:47.098 88c compacted to: files[ 0 0 2 0 0 0 0 ]
-2026/04/13-10:52:47.099 88c Delete type=2 #81
-2026/04/13-10:52:47.099 88c Delete type=2 #82
-2026/04/13-10:52:47.099 88c Delete type=2 #85
+2026/04/15-15:56:20.083 41d8 Reusing MANIFEST C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/15-15:56:20.094 41d8 Recovering log #89
+2026/04/15-15:56:20.193 41d8 Reusing old log C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000089.log 

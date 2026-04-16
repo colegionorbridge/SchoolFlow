@@ -1,5 +1,15 @@
-2026/04/13-10:32:23.415 3eec Reusing MANIFEST C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2026/04/13-10:32:23.427 3eec Recovering log #19
-2026/04/13-10:32:23.435 3eec Level-0 table #22: started
-2026/04/13-10:32:23.480 3eec Level-0 table #22: 17877 bytes OK
-2026/04/13-10:32:23.509 3eec Delete type=0 #19
+2026/04/15-15:56:13.318 35c0 Reusing MANIFEST C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/04/15-15:56:13.335 35c0 Recovering log #23
+2026/04/15-15:56:13.342 35c0 Reusing old log C:\Users\4°Gorriones\Desktop\NorBridge\servidor\.wwebjs_auth\session\Default\Local Storage\leveldb/000023.log 
+2026/04/15-18:46:41.883 bb4 Level-0 table #26: started
+2026/04/15-18:46:41.919 bb4 Level-0 table #26: 16565 bytes OK
+2026/04/15-18:46:41.928 bb4 Delete type=0 #23
+2026/04/15-18:46:41.933 bb4 Compacting 4@0 + 1@1 files
+2026/04/15-18:46:41.945 bb4 Generated table #27@0: 74 keys, 6531 bytes
+2026/04/15-18:46:41.945 bb4 Compacted 4@0 + 1@1 files => 6531 bytes
+2026/04/15-18:46:41.946 bb4 compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/04/15-18:46:41.949 bb4 Delete type=2 #14
+2026/04/15-18:46:41.950 bb4 Delete type=2 #17
+2026/04/15-18:46:41.950 bb4 Delete type=2 #20
+2026/04/15-18:46:41.951 bb4 Delete type=2 #22
+2026/04/15-18:46:41.951 bb4 Delete type=2 #26
