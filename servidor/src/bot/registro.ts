@@ -82,7 +82,7 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
             user.pasoRegistro = 4;
             await user.save();
             
-            await msg.reply('✅ **Código verificado correctamente.**\n\nAhora, ingresá tu **Correo Institucional** (@norbridge.edu.ar):');
+            await msg.reply('✅ **Código verificado correctamente.**\n\nAhora, ingresá tu **Correo Institucional** (@colegionorbridge.edu.ar):');
             break;
 
         case 4: // VALIDACIÓN DE CORREO Y LISTAR ROLES
