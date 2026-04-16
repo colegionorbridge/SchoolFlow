@@ -89,7 +89,7 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
             const correo = texto.toLowerCase();
 
             if (!correo.endsWith('@colegionorbridge.edu.ar')) {
-                await msg.reply('❌ El correo debe ser institucional (@norbridge.edu.ar). Reintentá:');
+                await msg.reply('❌ El correo debe ser institucional (@colegionorbridge.edu.ar). Reintentá:');
                 return;
             }
 
