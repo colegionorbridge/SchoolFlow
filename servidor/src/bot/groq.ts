@@ -15,7 +15,6 @@ export const consultarGroq = async (mensajeUsuario: string, historial: any[], da
             order: [['createdAt', 'DESC']]
         });
 
-        // Formateo previo de tickets para que la IA solo los inyecte si es necesario
         const infoTickets = ticketsActivos.length > 0 
             ? ticketsActivos.map((t: any) => {
                 return `ID #${t.id}\nAsunto: ${t.asunto}\nUbicación: ${t.ubicacion}\nEstado: ${t.estado}\n`;
@@ -28,44 +27,43 @@ export const consultarGroq = async (mensajeUsuario: string, historial: any[], da
 
 CONTEXTO DEL USUARIO:
 - Nombre: ${datosUsuario.nombreCompleto}
-- Teléfono: ${datosUsuario.telefono}
 - Rol: ${datosUsuario.rol?.nombre || 'Personal'}
 - Sector: ${datosUsuario.sectores?.map((s: any) => s.nombre).join(', ') || 'No especificado'}
 
 MISIÓN:
-Interpretar el mensaje del usuario para:
-1. Crear un nuevo ticket de reparación.
-2. Informar sobre el estado de sus tickets actuales.
+Interpretar el mensaje para:
+1. CREAR TICKETS: Si reportan una nueva avería o solicitud técnica.
+2. AGREGAR COMENTARIOS: Si aportan info extra sobre un ticket abierto.
+3. CERRAR TICKETS: Si el usuario indica que el problema ya se solucionó o quiere cancelarlo.
+4. INFORMAR: Mostrar estado de tickets actuales.
 
-REGLAS CRÍTICAS DE COMPORTAMIENTO:
-- TONO: Estrictamente profesional, serio y cordial. Si  su nombre completo es muy largo, puedes usar solo su primer nombre ".
-- EMOJIS: Prohibido el uso de emojis en cualquier parte de la respuesta.
-- ENFOQUE UNIDIRECCIONAL: No respondas preguntas que no tengan que ver con soporte técnico del colegio (clima, charlas generales, etc.). Si el usuario intenta salir del tema, redirígelo cortésmente a la gestión de tickets.
-- PRIVACIDAD: No reveles datos de otros usuarios.
+REGLAS CRÍTICAS:
+- TONO: Profesional, serio y cordial. Usa el primer nombre del usuario si el completo es muy largo.
+- EMOJIS: Prohibidos.
+- PRIVACIDAD: No puedes modificar datos personales del usuario directamente. Si lo piden, indica que deben crear un ticket para esa solicitud.
+- FOCO: No respondas temas ajenos a soporte técnico.
 
-FLUJO DE TRABAJO PARA NUEVOS TICKETS:
-Para generar un ticket necesitas: ASUNTO (qué pasó), DESCRIPCIÓN (detalles) y UBICACIÓN (aula/sector).
-1. Si falta información, pídela de forma directa y profesional.
-2. Cuando tengas la información completa, presenta un resumen y pregunta: "¿Desea que registre este ticket en el sistema?".
-3. SOLO si el usuario confirma explícitamente (ej: "Sí", "Confirmado", "Dale"), responde con la frase de transición: "Entendido. Procesando el registro en el sistema, por favor aguarde..." y envía accion: "CREAR_TICKET".
-
-GESTIÓN DE TICKETS EXISTENTES:
-- Si el usuario consulta por sus tickets o si es el inicio de la conversación (${esInicioChat}), informa sobre estos registros:
-${infoTickets}
-- Usa negritas con asteriscos solo para encabezados o datos clave (ej: *ID #101*).
+FLUJO DE TRABAJO:
+- PARA CREAR: Necesitas Asunto, Descripción y Ubicación. Pide lo que falte. Tras confirmar, usa accion: "CREAR_TICKET".
+- PARA COMENTAR/CERRAR: Identifica el ID del ticket del que habla el usuario. 
+  * Si el usuario dice que "ya funciona" o "se arregló", usa accion: "CERRAR_TICKET".
+  * Si aporta datos extra, usa accion: "AGREGAR_COMENTARIO".
 
 FORMATO DE SALIDA (JSON ESTRICTO):
 {
-  "respuesta": "Tu mensaje siguiendo las reglas de formato (usa \\n para saltos de línea)",
-  "accion": "CREAR_TICKET" | "NINGUNA",
+  "respuesta": "Tu mensaje siguiendo las reglas de formato",
+  "accion": "CREAR_TICKET" | "AGREGAR_COMENTARIO" | "CERRAR_TICKET" | "NINGUNA",
   "ticketData": { 
-      "asunto": "Breve y claro", 
-      "descripcion": "Detallada", 
-      "ubicacion": "Específica" 
+      "id": 0,
+      "asunto": "", 
+      "descripcion": "", 
+      "ubicacion": "",
+      "comentario": "Contenido del comentario o motivo del cierre"
   }
 }
 
-Si no estás creando un ticket, ticketData debe ir con strings vacíos.`;
+TICKETS ACTIVOS DEL USUARIO:
+${infoTickets}`;
 
         const messages = [
             { role: "system", content: instrucciones },
@@ -85,7 +83,7 @@ Si no estás creando un ticket, ticketData debe ir con strings vacíos.`;
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: messages,
-                temperature: 0.2, // Bajamos la temperatura para mayor seriedad y menos "creatividad"
+                temperature: 0.2,
                 response_format: { type: "json_object" }
             })
         });
@@ -93,6 +91,7 @@ Si no estás creando un ticket, ticketData debe ir con strings vacíos.`;
         const data = await response.json();
         const resultado = JSON.parse(data.choices[0].message.content);
 
+        // Inyectamos el teléfono si estamos creando
         if (resultado.ticketData && resultado.accion === 'CREAR_TICKET') {
             resultado.ticketData.userTelefono = datosUsuario.telefono;
         }
@@ -102,7 +101,7 @@ Si no estás creando un ticket, ticketData debe ir con strings vacíos.`;
     } catch (error: any) {
         console.error("❌ Error en Groq:", error.message);
         return {
-            respuesta: `Estimado/a ${datosUsuario.nombreCompleto}, se ha producido un error en el sistema de procesamiento. Por favor, reintente su solicitud.`,
+            respuesta: `Estimado/a ${datosUsuario.nombreCompleto}, tuve un error interno. ¿Podría repetir su solicitud?`,
             accion: "NINGUNA",
             ticketData: null
         };

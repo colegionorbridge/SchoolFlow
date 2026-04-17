@@ -3,23 +3,39 @@ import { consultarGroq } from './groq.js';
 import { manejarRegistro } from './registro.js';
 
 export const handleIncomingMessage = async (msg: any) => {
+    // Definimos la variable user fuera para poder usarla en el catch/finally
+    let user: any = null;
+
     try {
         const contacto = await msg.getContact();
         const telefono = contacto.number; 
 
         // 1. Buscar usuario con sus relaciones
-        const user = await User.findByPk(telefono, {
+        user = await User.findByPk(telefono, {
             include: [
                 { model: Role, as: 'rol' }, 
                 { model: Sector, as: 'sectores' }
             ]
-        }) as any;
+        });
 
-        // 2. Lógica de registro (Pasos 0 a 5)
-      if (!user || (!user.registroCompleto && !user.esAdmin)) {
-    await manejarRegistro(msg, user, telefono);
-    return;
-}
+        // 2. Lógica de registro
+        if (!user || (!user.registroCompleto && !user.esAdmin)) {
+            await manejarRegistro(msg, user, telefono);
+            return;
+        }
+
+        // --- BLOQUEO DE SEGURIDAD (ANTI-DUPLICADOS) ---
+        // Si ya hay un proceso activo para este número, ignoramos este nuevo mensaje
+        if (user.context?.procesando === true) {
+            console.log(`⚠️ Ignorando mensaje duplicado de ${telefono} (proceso en curso)`);
+            return;
+        }
+
+        // Marcamos el inicio del proceso
+        user.context = { ...user.context, procesando: true };
+        user.changed('context', true);
+        await user.save();
+
         // --- 3. FLUJO CON IA ---
         const chat = await msg.getChat();
         const mensajesPrevios = await chat.fetchMessages({ limit: 10 });
@@ -31,41 +47,64 @@ export const handleIncomingMessage = async (msg: any) => {
                 parts: [{ text: m.body }]
             }));
 
-        // Llamada a Groq: La IA decidirá si es charla o creación
         const resultadoIA = await consultarGroq(msg.body, historialParaIA, user);
 
-        // A. Enviamos la respuesta de la IA (Ej: "Dale, aguardá que lo registro...")
+        // A. Enviamos la respuesta de la IA (Confirmación de palabra)
         await msg.reply(resultadoIA.respuesta);
 
-        // B. Si la IA activó la acción, el Handler toma la posta técnica
-        if (resultadoIA.accion === 'CREAR_TICKET') {
-            const data = resultadoIA.ticketData;
-            
-            if (data && data.asunto && data.ubicacion) {
-                try {
-                    // Creamos el registro real en PostgreSQL
-                    const nuevoTicket = await Ticket.create({
-                        asunto: data.asunto,
-                        descripcion: data.descripcion || "Sin descripción adicional",
-                        ubicacion: data.ubicacion,
-                        userTelefono: telefono,
-                        estado: 'abierto',
-                        historial: [] 
-                    });
+        // B. Ejecución de Acciones Técnicas
+        const { accion, ticketData } = resultadoIA;
 
-                    // C. Notificación final con el ID real de la base de datos
-                    // Esto es lo que el usuario ve como confirmación definitiva
-                    await msg.reply(`✅ **Ticket #${nuevoTicket.id} generado con éxito.**\nAlejandro ha sido notificado y lo revisará pronto.`);
-                    
-                    console.log(`✅ Ticket #${nuevoTicket.id} creado exitosamente para ${telefono}`);
-                } catch (dbError) {
-                    console.error("❌ Error al guardar ticket en DB:", dbError);
-                    await msg.reply("⚠️ Hubo un problema técnico al guardar el ticket. Por favor, contacta a soporte.");
+        // ACCIÓN 1: CREAR TICKET
+        if (accion === 'CREAR_TICKET' && ticketData.asunto) {
+            const nuevoTicket = await Ticket.create({
+                asunto: ticketData.asunto,
+                descripcion: ticketData.descripcion || "Sin descripción adicional",
+                ubicacion: ticketData.ubicacion,
+                userTelefono: telefono,
+                estado: 'abierto',
+                historial: [] 
+            });
+            await msg.reply(`✅ **Ticket #${nuevoTicket.id} generado.**\nYa podés consultarlo en cualquier momento.`);
+        }
+
+        // ACCIÓN 2 y 3: AGREGAR COMENTARIO o CERRAR TICKET
+        if (accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') {
+            const ticket = await Ticket.findByPk(ticketData.id);
+
+            if (!ticket) {
+                await msg.reply(`⚠️ No se encontró el Ticket #${ticketData.id}.`);
+            } else {
+                const nuevaNota = {
+                    fecha: new Date().toLocaleString('es-AR'),
+                    autor: user.nombreCompleto,
+                    nota: ticketData.comentario || (accion === 'CERRAR_TICKET' ? "Ticket cerrado por el usuario." : "Información adicional")
+                };
+
+                const nuevoHistorial = [...(ticket.historial || []), nuevaNota];
+                ticket.historial = nuevoHistorial;
+
+                if (accion === 'CERRAR_TICKET') {
+                    ticket.estado = 'cerrado';
                 }
+
+                await ticket.save();
+                
+                const txtExito = accion === 'CERRAR_TICKET' ? 'cerrado' : 'actualizado';
+                await msg.reply(`✅ **Ticket #${ticket.id} ${txtExito}** correctamente.`);
             }
         }
 
     } catch (error) {
         console.error('❌ Error crítico en el handler:', error);
+    } finally {
+        // --- LIBERACIÓN FINAL ---
+        // Pase lo que pase, al final del flujo liberamos al usuario 
+        // para que pueda volver a enviar mensajes.
+        if (user) {
+            user.context = { ...user.context, procesando: false };
+            user.changed('context', true);
+            await user.save();
+        }
     }
 };
