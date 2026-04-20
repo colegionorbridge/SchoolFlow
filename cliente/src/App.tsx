@@ -1,7 +1,12 @@
-import { useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { RouterProvider } from 'react-router-dom';
 import { socket } from './socket';
-
+import { createMyRouter } from './routes/AppRoutes';
+import { DataProvider } from './context/DataContext';
 export default function App() {
+  const [isAuth, setIsAuth] = useState(false);
+
+  // Configuramos los listeners del socket una sola vez
   useEffect(() => {
     socket.on('connect', () => {
       console.log('✅ Conexión establecida con el servidor del colegio');
@@ -17,9 +22,14 @@ export default function App() {
     };
   }, []);
 
+  // Creamos el router pasando el estado actual
+  const router = useMemo(() => 
+    createMyRouter({ isAuth, setIsAuth }), 
+  [isAuth]);
+
   return (
-    <div>
-      <h1>Panel de IT - Colegio Norbridge</h1>
-    </div>
+    <DataProvider>
+      <RouterProvider router={router} />
+    </DataProvider>
   );
 }

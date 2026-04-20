@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import styles from './Login.module.css';
-
+import { useData } from '../../context/DataContext';
 interface LoginProps {
   onLogin: () => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const { cargarDatosIniciales } = useData();
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
   // Forzamos una clave sencilla por ahora
   const CLAVE_MAESTRA = "norbridge2026"; 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password === CLAVE_MAESTRA) {
       setError(false);
+      await cargarDatosIniciales();
       onLogin(); // Avisamos al componente padre que entramos
     } else {
       setError(true);
