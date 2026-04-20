@@ -10,44 +10,65 @@ interface TicketModalProps {
 const TicketModal: React.FC<TicketModalProps> = ({ ticket, onClose, onUpdate }) => {
   const [estado, setEstado] = useState(ticket.estado);
   const [prioridad, setPrioridad] = useState(ticket.prioridad);
+  const [nuevaNota, setNuevaNota] = useState(''); // Estado para la nota nueva
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    await onUpdate(ticket.id, { estado, prioridad });
-    setSaving(false);
-    onClose();
+    try {
+      // Enviamos el estado, la prioridad y la nota si existe
+      await onUpdate(ticket.id, { 
+        estado, 
+        prioridad, 
+        nuevaNota: nuevaNota.trim() !== '' ? nuevaNota : null 
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error al guardar:", error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2>Detalle Ticket #{ticket.id}</h2>
           <button onClick={onClose} className={styles.closeBtn}>&times;</button>
         </div>
 
         <div className={styles.body}>
-          <section className={styles.info}>
-            <p><strong>Solicitante:</strong> {ticket.autor?.nombreCompleto} ({ticket.userTelefono})</p>
-            <p><strong>Ubicación:</strong> {ticket.ubicacion}</p>
-            <p><strong>Asunto:</strong> {ticket.asunto}</p>
-            <p><strong>Descripción:</strong> {ticket.descripcion}</p>
+          <section className={styles.infoGrid}>
+            <div>
+              <label>Solicitante</label>
+              <p>{ticket.autor?.nombreCompleto || 'Desconocido'}</p>
+              <small>{ticket.userTelefono}</small>
+            </div>
+            <div>
+              <label>Ubicación</label>
+              <p>{ticket.ubicacion}</p>
+            </div>
           </section>
 
-          <hr />
+          <section className={styles.descriptionBox}>
+            <label>Asunto</label>
+            <h3>{ticket.asunto}</h3>
+            <label>Descripción</label>
+            <p>{ticket.descripcion}</p>
+          </section>
 
-          <div className={styles.controls}>
-            <div className={styles.controlGroup}>
+          <div className={styles.actionGrid}>
+            <div className={styles.selectWrapper}>
               <label>Estado</label>
               <select value={estado} onChange={(e) => setEstado(e.target.value)}>
-                <option value="abierto">Abierto</option>
-                <option value="en_proceso">En Proceso</option>
-                <option value="cerrado">Cerrado</option>
+                <option value="abierto">🟠 Abierto</option>
+                <option value="en_proceso">🔵 En Proceso</option>
+                <option value="cerrado">🟢 Cerrado</option>
               </select>
             </div>
 
-            <div className={styles.controlGroup}>
+            <div className={styles.selectWrapper}>
               <label>Prioridad</label>
               <select value={prioridad} onChange={(e) => setPrioridad(e.target.value)}>
                 <option value="baja">Baja</option>
@@ -57,18 +78,31 @@ const TicketModal: React.FC<TicketModalProps> = ({ ticket, onClose, onUpdate }) 
             </div>
           </div>
 
-          <section className={styles.history}>
-            <h3>Historial / Notas</h3>
+          <section className={styles.noteInputSection}>
+            <label>Agregar Nota / Seguimiento</label>
+            <textarea 
+              placeholder="Escribe qué se hizo o alguna observación..."
+              value={nuevaNota}
+              onChange={(e) => setNuevaNota(e.target.value)}
+              className={styles.textarea}
+            />
+          </section>
+
+          <section className={styles.historySection}>
+            <label>Historial de Notas</label>
             <div className={styles.timeline}>
               {ticket.historial && ticket.historial.length > 0 ? (
-                ticket.historial.map((h: any, i: number) => (
-                  <div key={i} className={styles.note}>
-                    <small>{h.fecha} - <strong>{h.autor}</strong></small>
+                ticket.historial.slice().reverse().map((h: any, i: number) => (
+                  <div key={i} className={styles.noteCard}>
+                    <div className={styles.noteMeta}>
+                      <strong>{h.autor}</strong>
+                      <span>{h.fecha}</span>
+                    </div>
                     <p>{h.nota}</p>
                   </div>
                 ))
               ) : (
-                <p className={styles.empty}>No hay notas aún.</p>
+                <p className={styles.emptyHistory}>Sin notas registradas.</p>
               )}
             </div>
           </section>
