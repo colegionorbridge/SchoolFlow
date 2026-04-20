@@ -1,24 +1,40 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { socket } from '../socket';
 
+// Interface ajustada a tu modelo de Sequelize y la consulta del backend
 interface Ticket {
   id: number;
-  nombre: string;
-  sector: string;
-  problema: string;
-  estado: 'abierto' | 'cerrado';
+  asunto: string;
+  descripcion: string;
+  ubicacion: string;
+  estado: 'abierto' | 'en_proceso' | 'cerrado';
+  prioridad: 'baja' | 'media' | 'alta';
+  userTelefono: string;
+  createdAt: string;
+  autor?: {
+    nombreCompleto: string | null;
+    telefono: string;
+    rol?: {
+      nombre: string;
+    }
+  };
 }
 
 interface Usuario {
-  id: number;
-  nombre: string;
-  rol: string;
-  ultimo_acceso: string;
+  telefono: string; // Tu PK es el teléfono
+  nombreCompleto: string | null;
+  email: string | null;
+  esAdmin: boolean;
+  registroCompleto: boolean;
+  rol?: {
+    nombre: string;
+  };
+  sectores?: Array<{ nombre: string }>;
 }
 
 interface DataContextType {
   tickets: Ticket[];
-  usuarios: Usuario[]; // <-- Nueva lista
+  usuarios: Usuario[];
   loading: boolean;
   cargarDatosIniciales: () => Promise<void>;
 }
@@ -32,13 +48,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const API_URL = import.meta.env.VITE_API_URL;
 
- const cargarDatosIniciales = async () => {
+  const cargarDatosIniciales = async () => {
     setLoading(true);
     try {
-      // Agregamos el prefijo /api que definimos en el servidor
+      // Llamada paralela a tus endpoints de Cloudflare
       const [resTickets, resUsuarios] = await Promise.all([
-        fetch(`${API_URL}/api/tickets`),  // <-- Antes decía /tickets
-        fetch(`${API_URL}/api/usuarios`)  // <-- Antes decía /usuarios
+        fetch(`${API_URL}/api/tickets`),
+        fetch(`${API_URL}/api/usuarios`)
       ]);
 
       if (!resTickets.ok || !resUsuarios.ok) {
@@ -51,20 +67,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTickets(dataTickets);
       setUsuarios(dataUsuarios);
     } catch (error) {
-      console.error("Error al obtener datos iniciales de Neon:", error);
+      console.error("Error al obtener datos iniciales de la API:", error);
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
-    // Sockets para Tickets
+    // Escuchar actualizaciones en tiempo real via Socket.io
     socket.on('nuevo-ticket', (nuevoTicket: Ticket) => {
       setTickets((prev) => [nuevoTicket, ...prev]);
     });
 
-    // Sockets para Usuarios (por ejemplo, cuando alguien se registra en el bot)
     socket.on('nuevo-usuario', (nuevoUsuario: Usuario) => {
-      setUsuarios((prev) => [...prev, nuevoUsuario]);
+      setUsuarios((prev) => [nuevoUsuario, ...prev]);
     });
 
     return () => {

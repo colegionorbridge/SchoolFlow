@@ -1,79 +1,119 @@
 .container {
-  padding: 20px;
+  padding: 30px;
   max-width: 1200px;
   margin: 0 auto;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 30px;
 }
 
-.grid {
+.title {
+  margin: 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.subtitle {
+  margin: 0;
+  color: #6b7280;
+}
+
+.statusBadge {
+  background-color: #ecfdf5;
+  color: #065f46;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.onlineDot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.statsGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
+  margin-bottom: 30px;
 }
 
-@media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr; }
+.statCard {
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+  background-color: white;
 }
 
-.card {
-  background: white;
-  border-radius: 10px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+.statNumber {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 10px 0 0 0;
+  color: #2563eb;
 }
 
-.tableContainer {
+.tableSection {
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
   overflow-x: auto;
-  margin-top: 1rem;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 10px;
 }
 
 .table th {
   text-align: left;
   padding: 12px;
-  background: #f1f3f5;
-  color: #495057;
-  font-size: 0.9rem;
+  border-bottom: 2px solid #f3f4f6;
+  color: #374151;
 }
 
-.table td {
+.row {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.row td {
   padding: 12px;
-  border-bottom: 1px solid #f1f1f1;
-  font-size: 0.9rem;
+}
+
+.description {
+  font-size: 13px;
+  color: #6b7280;
+  display: block;
 }
 
 .badge {
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.statusText {
+  font-size: 12px;
   font-weight: bold;
-  text-transform: uppercase;
 }
 
-.badgeOpen { background: #fff4e6; color: #d9480f; }
-.badgeClosed { background: #ebfbee; color: #2b8a3e; }
-
-.btn {
-  padding: 6px 12px;
-  background: #228be6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
 }
-
-.btn:hover { background: #1c7ed6; }

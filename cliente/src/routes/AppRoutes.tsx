@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Login from '../components/Login/Login';
+import Dashboard from '../components/Dashboard/Dashboard';
 
 interface CreateRouterProps {
   isAuth: boolean;
@@ -18,13 +19,7 @@ export const createMyRouter = ({ isAuth, setIsAuth }: CreateRouterProps) =>
     },
     {
       path: "/dashboard",
-      element: isAuth ? (
-        <div style={{ padding: '20px' }}>
-          <h1>Panel de Gestión - Norbridge </h1>
-          <p>Servidor: 🟢 Online</p>
-          {/* Aquí irá tu futuro componente Dashboard */}
-        </div>
-      ) : (
+      element: isAuth ? <Dashboard /> : (
         <Navigate to="/login" replace />
       ),
     },

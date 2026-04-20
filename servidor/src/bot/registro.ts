@@ -1,4 +1,5 @@
 import { User, Sector, UserSector, Role } from '../models/models.js';
+import { io } from '../socket/server.js';
 
 export const manejarRegistro = async (msg: any, user: any, telefono: string) => {
     const texto = msg.body.trim();
@@ -166,6 +167,21 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
             user.context = { ...user.context, registro: null, rolPendienteId: null }; 
             user.changed('context', true);
             await user.save();
+
+            // --- SOCKET DE FINALIZACIÓN ---
+// Buscamos el usuario con sus relaciones para que el Front 
+// lo muestre lindo (con el nombre del rol y sector)
+const userFinal = await User.findByPk(user.telefono, {
+    include: [
+        { model: Role, as: 'rol' },
+        { model: Sector, as: 'sectores' }
+    ]
+});
+
+if (io && userFinal) {
+    // Emitimos un evento específico o el mismo de siempre
+    io.emit('usuario-registrado-nuevo', userFinal); 
+}
 
             await msg.reply(`✅ **Código de rol verificado.**\n\n🎉 **¡Registro completado!** Bienvenido/a al sistema, ${user.nombreCompleto}.`);
             break;
