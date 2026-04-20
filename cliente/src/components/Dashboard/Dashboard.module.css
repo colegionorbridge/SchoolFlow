@@ -117,3 +117,31 @@
   align-items: center;
   height: 80vh;
 }
+
+/* ... tus estilos anteriores ... */
+
+.sortableHeader {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortableHeader:hover {
+  background-color: #f9fafb;
+  color: #2563eb;
+}
+
+.statusText {
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.rowClickable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.rowClickable:hover {
+  background-color: #f8fafc; /* Un gris muy clarito para resaltar la selección */
+}

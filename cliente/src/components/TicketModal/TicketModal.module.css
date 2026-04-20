@@ -1,0 +1,231 @@
+/* --- OVERLAY (FONDO OSCURECIDO) --- */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(17, 24, 39, 0.7); /* Gris oscuro del dashboard con opacidad */
+  backdrop-filter: blur(4px); /* Efecto de desenfoque moderno */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* --- CONTENEDOR MODAL --- */
+.modal {
+  background-color: white;
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+/* --- HEADER --- */
+.header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9fafb;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #111827;
+  font-weight: 700;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.closeBtn:hover {
+  color: #ef4444;
+}
+
+/* --- CUERPO DEL MODAL --- */
+.body {
+  padding: 24px;
+  overflow-y: auto;
+  color: #374151;
+}
+
+.gridInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.infoSection label,
+.contentSection label,
+.control label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.infoSection p {
+  margin: 0;
+  font-weight: 600;
+  color: #111827;
+}
+
+.contentSection {
+  margin-bottom: 24px;
+}
+
+.asuntoText {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #1e40af; /* Azul Norbridge */
+}
+
+.descText {
+  background-color: #f3f4f6;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* --- SELECTORES --- */
+.selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.control select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #111827;
+  cursor: pointer;
+}
+
+.control select:focus {
+  outline: none;
+  border-color: #2563eb;
+  ring: 2px solid #bfdbfe;
+}
+
+/* --- HISTORIAL / TIMELINE --- */
+.historySection h3 {
+  font-size: 1rem;
+  margin-bottom: 16px;
+  color: #111827;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note {
+  padding: 12px;
+  border-left: 4px solid #2563eb;
+  background-color: #f9fafb;
+  border-radius: 0 8px 8px 0;
+}
+
+.noteHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.noteHeader span {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.noteHeader small {
+  color: #9ca3af;
+}
+
+.note p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* --- FOOTER --- */
+.footer {
+  padding: 16px 24px;
+  background-color: #f9fafb;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn:hover {
+  background-color: #f3f4f6;
+}
+
+.saveBtn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  background-color: #2563eb; /* Azul Primario */
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.saveBtn:hover {
+  background-color: #1d4ed8;
+}
+
+.saveBtn:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.noNotes {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.9rem;
+}
