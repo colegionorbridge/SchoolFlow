@@ -1,20 +1,19 @@
 import { Router } from 'express';
-// Importamos los controladores. 
-// Usamos .js al final porque tu proyecto usa ESM (módulos nativos)
-import { getTickets, getUsuarios } from '../controllers/dashboard.controller.js';
+import { 
+  getTickets, 
+  getUsuarios, 
+  updateTicket // <-- Importamos el nuevo controlador
+} from '../controllers/dashboard.controller.js';
 
 const router: Router = Router();
 
-/**
- * @route GET /api/tickets
- * @desc Obtener todos los incidentes con los datos de sus autores
- */
 router.get('/tickets', getTickets);
+router.get('/usuarios', getUsuarios);
 
 /**
- * @route GET /api/usuarios
- * @desc Obtener la lista de personal registrado (docentes, admin, etc)
+ * @route PATCH /api/tickets/:id
+ * @desc Actualizar estado, prioridad y añadir notas al historial
  */
-router.get('/usuarios', getUsuarios);
+router.patch('/tickets/:id', updateTicket);
 
 export default router;
