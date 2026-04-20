@@ -1,29 +1,30 @@
-import express from 'express';
-import dotenv from 'dotenv';
-// Aquí importarás tus rutas cuando las crees
-// import whatsappRoutes from './routes/whatsapp.routes.js';
+import express, { type Application, type Request, type Response, type NextFunction } from 'express';
+import cors from 'cors';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
-dotenv.config();
+const app: Application = express();
 
-const app = express();
+// 1. Configuración de CORS ultra-permisiva para Debug
+app.use(cors({
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-/**
- * MIDDLEWARES
- */
-app.use(express.json()); // Para procesar JSON en el cuerpo de las peticiones
+app.use(express.json());
 
-/**
- * RUTAS
- */
-// Ruta de salud del sistema
-app.get('/ping', (_req, res) => {
-    res.json({ 
-        status: 'online', 
-        message: 'Servidor del Colegio Norbridge funcionando' 
-    });
+// 2. Middleware para limpiar errores de CSP y forzar el paso
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline';");
+  next();
 });
 
-// Ejemplo de dónde irían tus rutas de WhatsApp
-// app.use('/webhook', whatsappRoutes);
+// 3. Ruta de prueba directa (SIN router) para descartar fallos de importación
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', message: 'Si ves esto, el túnel y el prefijo /api funcionan' });
+});
+
+// 4. Tus rutas modularizadas
+app.use('/api', dashboardRoutes);
 
 export default app;

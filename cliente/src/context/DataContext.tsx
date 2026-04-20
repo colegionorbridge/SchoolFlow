@@ -32,14 +32,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  const cargarDatosIniciales = async () => {
+ const cargarDatosIniciales = async () => {
     setLoading(true);
     try {
-      // Usamos Promise.all para que las dos peticiones corran en paralelo
+      // Agregamos el prefijo /api que definimos en el servidor
       const [resTickets, resUsuarios] = await Promise.all([
-        fetch(`${API_URL}/tickets`),
-        fetch(`${API_URL}/usuarios`)
+        fetch(`${API_URL}/api/tickets`),  // <-- Antes decía /tickets
+        fetch(`${API_URL}/api/usuarios`)  // <-- Antes decía /usuarios
       ]);
+
+      if (!resTickets.ok || !resUsuarios.ok) {
+        throw new Error('Error en la respuesta del servidor');
+      }
 
       const dataTickets = await resTickets.json();
       const dataUsuarios = await resUsuarios.json();
@@ -52,7 +56,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
-
   useEffect(() => {
     // Sockets para Tickets
     socket.on('nuevo-ticket', (nuevoTicket: Ticket) => {
