@@ -8,7 +8,9 @@ export const getTickets = async (_req: Request, res: Response) => {
         {
           model: User,
           as: 'autor',
-          attributes: ['nombre'], // Solo traemos el nombre para no exponer datos sensibles
+          // CORRECCIÓN: Usamos 'nombreCompleto' y también 'telefono' 
+          // (necesario si tu relación se basa en userTelefono -> telefono)
+          attributes: ['nombreCompleto', 'telefono'], 
           include: [{ model: Role, as: 'rol', attributes: ['nombre'] }]
         }
       ],
