@@ -7,7 +7,7 @@ const app: Application = express();
 // 1. Configuración de CORS ultra-permisiva para Debug
 app.use(cors({
   origin: '*', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
