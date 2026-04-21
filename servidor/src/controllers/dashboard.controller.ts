@@ -1,16 +1,15 @@
 import { type Request, type Response } from 'express';
 import { Ticket, User, Role, Sector } from '../models/models.js';
 import { io } from '../socket/server.js'
-
+// Importamos la instancia de client desde tu archivo bot/whatsapp.js
+import { client } from '../bot/whatsapp.js';
 export const getTickets = async (_req: Request, res: Response) => {
   try {
     const tickets = await Ticket.findAll({
       include: [
         {
           model: User,
-          as: 'autor',
-          // CORRECCIÓN: Usamos 'nombreCompleto' y también 'telefono' 
-          // (necesario si tu relación se basa en userTelefono -> telefono)
+          as: 'autor',  
           attributes: ['nombreCompleto', 'telefono'], 
           include: [{ model: Role, as: 'rol', attributes: ['nombre'] }]
         }
@@ -48,11 +47,14 @@ export const updateTicket = async (req: Request, res: Response) => {
         const ticket = await Ticket.findByPk(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket no encontrado' });
 
-        // Actualizamos campos
+        // Guardamos el estado anterior para comparar cambios
+        const estadoAnterior = ticket.estado;
+
+        // 1. Actualizamos campos básicos
         if (estado) ticket.estado = estado;
         if (prioridad) ticket.prioridad = prioridad;
 
-        // Si hay una nota desde el Dashboard
+        // 2. Gestionamos la nota en el historial
         if (nuevaNota && nuevaNota.trim() !== '') {
             const notaObjeto = {
                 fecha: new Date().toLocaleString('es-AR'),
@@ -67,13 +69,29 @@ export const updateTicket = async (req: Request, res: Response) => {
 
         await ticket.save();
 
-        // Buscamos el ticket completo con el autor para que el front tenga todo
+        // 3. --- LÓGICA DE NOTIFICACIONES POR WHATSAPP ---
+        const chatId = ticket.userTelefono.includes('@c.us') 
+            ? ticket.userTelefono 
+            : `${ticket.userTelefono}@c.us`;
+
+        // Caso A: Pasa a En Proceso
+        if (estado === 'en_proceso' && estadoAnterior !== 'en_proceso') {
+            const msjProceso = `Hola! 👋 Te informamos que tu ticket *#${ticket.id}* ("${ticket.asunto}") ya está *en proceso de reparación*.`;
+            client.sendMessage(chatId, msjProceso).catch(e => console.error("Error envío WS:", e));
+        } 
+        
+        // Caso B: Se cierra el Ticket
+        else if (estado === 'cerrado' && estadoAnterior !== 'cerrado') {
+            const msjCierre = `✅ Tu ticket *#${ticket.id}* ("${ticket.asunto}") ha sido *finalizado*. \n\nSi el problema persiste, podés abrir uno nuevo. ¡Gracias!`;
+            client.sendMessage(chatId, msjCierre).catch(e => console.error("Error envío WS:", e));
+        }
+
+        // 4. Buscamos el ticket completo para sincronizar el Dashboard
         const ticketActualizado = await Ticket.findByPk(ticket.id, {
             include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
         });
 
-        // --- EL PASO CLAVE ---
-        // Emitimos el mismo evento que usa el Bot de WhatsApp
+        // Emitimos por Socket para que se vea el cambio en tiempo real en el front
         if (io && ticketActualizado) {
             io.emit('ticket-actualizado', ticketActualizado);
         }
@@ -81,7 +99,7 @@ export const updateTicket = async (req: Request, res: Response) => {
         return res.json(ticketActualizado);
 
     } catch (error) {
-        console.error('Error:', error);
-        return res.status(500).json({ message: 'Error interno' });
+        console.error('❌ Error en updateTicket:', error);
+        return res.status(500).json({ message: 'Error interno del servidor' });
     }
 };
