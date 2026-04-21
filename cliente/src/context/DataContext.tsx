@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { socket } from '../socket';
-
-// Interfaces ajustadas a tu modelo
+import toast, { Toaster } from 'react-hot-toast'; 
+// Interfaces
 interface Ticket {
   id: number;
   asunto: string;
@@ -11,7 +11,7 @@ interface Ticket {
   prioridad: 'baja' | 'media' | 'alta';
   userTelefono: string;
   createdAt: string;
-  historial?: any[]; // Por si querés mostrar las notas
+  historial?: any[];
   autor?: {
     nombreCompleto: string | null;
     telefono: string;
@@ -53,6 +53,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const API_URL = import.meta.env.VITE_API_URL;
 
+  // 2. Audio de notificación (useMemo evita que se recree el objeto en cada render)
+  const notificationSound = useMemo(() => new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'), []);
+
   const cargarDatosIniciales = async () => {
     setLoading(true);
     try {
@@ -78,17 +81,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // 1. Carga inicial al montar el componente
     cargarDatosIniciales();
 
     // --- EVENTOS DE TICKETS ---
 
-    // Nuevo Ticket: Se agrega arriba de todo
     socket.on('nuevo-ticket', (nuevoTicket: Ticket) => {
+      // 3. Lógica de Notificación
+      
+      // A. Sonido (manejamos la promesa de reproducción)
+      notificationSound.play().catch(err => console.warn("Audio bloqueado por el navegador hasta interacción del usuario", err));
+
+      // B. Alerta visual en pantalla
+      toast.success(`Nuevo ticket #${nuevoTicket.id} ingresado: ${nuevoTicket.asunto}`, {
+        duration: 6000,
+        position: 'top-right',
+        icon: '🔔',
+        style: {
+          borderRadius: '10px',
+          background: '#1e293b',
+          color: '#fff',
+        },
+      });
+
       setTickets((prev) => [nuevoTicket, ...prev]);
     });
 
-    // Ticket Actualizado: Mapeamos para reemplazar el viejo por el nuevo
     socket.on('ticket-actualizado', (ticketActualizado: Ticket) => {
       setTickets((prev) => 
         prev.map((t) => t.id === ticketActualizado.id ? ticketActualizado : t)
@@ -97,24 +114,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- EVENTOS DE USUARIOS ---
 
-    // Usuario Actualizado (Maneja estado "procesando", cambios de nombre, etc.)
     socket.on('usuario-actualizado', (userActualizado: Usuario) => {
       setUsuarios((prev) => {
         const existe = prev.some((u) => u.telefono === userActualizado.telefono);
         if (existe) {
-          // Si ya existe en la lista, lo actualizamos
           return prev.map((u) => u.telefono === userActualizado.telefono ? userActualizado : u);
         } else {
-          // Si es un usuario que no estaba (ej: admin nuevo), lo agregamos
           return [userActualizado, ...prev];
         }
       });
     });
 
-    // Nuevo Registro: Evento específico para cuando alguien termina el proceso
     socket.on('usuario-registrado-nuevo', (nuevoUsuario: Usuario) => {
       setUsuarios((prev) => {
-        // Evitamos duplicados
         if (prev.some(u => u.telefono === nuevoUsuario.telefono)) {
           return prev.map((u) => u.telefono === nuevoUsuario.telefono ? nuevoUsuario : u);
         }
@@ -122,17 +134,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     });
 
-    // Limpieza de eventos al desmontar
     return () => {
       socket.off('nuevo-ticket');
       socket.off('ticket-actualizado');
       socket.off('usuario-actualizado');
       socket.off('usuario-registrado-nuevo');
     };
-  }, []);
+  }, [notificationSound]); // Agregamos el audio como dependencia
 
   return (
     <DataContext.Provider value={{ tickets, usuarios, loading, cargarDatosIniciales }}>
+      {/* 4. El componente Toaster debe estar aquí para renderizar las alertas */}
+      <Toaster />
       {children}
     </DataContext.Provider>
   );
