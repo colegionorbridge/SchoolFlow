@@ -62,7 +62,14 @@ export const updateTicket = async (req: Request, res: Response) => {
                 nota: nuevaNota.trim()
             };
 
-            const historialActual = Array.isArray(ticket.historial) ? ticket.historial : [];
+            // Parseamos historial por si viene como string JSON
+            let historialActual: any[] = [];
+            if (Array.isArray(ticket.historial)) {
+                historialActual = ticket.historial;
+            } else if (typeof ticket.historial === 'string') {
+                try { historialActual = JSON.parse(ticket.historial); } catch { historialActual = []; }
+            }
+
             ticket.historial = [...historialActual, notaObjeto];
             ticket.changed('historial', true);
         }
@@ -78,7 +85,7 @@ export const updateTicket = async (req: Request, res: Response) => {
 
         // Caso A: Se agrego una nota/comentario (independientemente del cambio de estado)
         if (nuevaNota && nuevaNota.trim() !== '') {
-            const msjNota = `📋 El tecnico *Alejandro* agrego un comentario a tu ticket *#${ticket.id}*: "${ticket.asunto}"\n\n💬 _"${nuevaNota.trim()}"_\n\nSi queres ver el detalle completo responde *SI*.`;
+            const msjNota = `📋 El tecnico *Alejandro* agrego un comentario a tu ticket *#${ticket.id}*: "${ticket.asunto}"\n\n💬 _"${nuevaNota.trim()}"_`;
             console.log('📨 [Notificacion] Enviando mensaje de nota:', msjNota);
             try {
                 await client.sendMessage(chatId, msjNota);

@@ -2,6 +2,7 @@ import { User, Role, Sector, Ticket } from '../models/models.js';
 import { consultarGroq } from './groq.js';
 import { manejarRegistro } from './registro.js';
 import { processCommand } from './commands.js';
+import { ejecutarAccion } from './actions.js';
 import { io } from '../socket/server.js'; 
 
 // 1. Definimos la forma de la respuesta de la IA para que TS no proteste
@@ -78,59 +79,79 @@ export const handleIncomingMessage = async (msg: any) => {
                 parts: [{ text: m.body }]
             }));
 
-        // 2. ERROR SOLUCIONADO: Forzamos el tipo de retorno de la IA
         const resultadoIA = await consultarGroq(msg.body, historialParaIA, user) as RespuestaIA;
 
-        // Ahora TS sabe que 'respuesta' existe
-        await msg.reply(resultadoIA.respuesta);
-
-        // Ahora TS sabe que 'accion' y 'ticketData' existen
+        // Si la respuesta de la IA NO tiene una accion que requiera confirmacion, respondemos normal
         const { accion, ticketData } = resultadoIA;
 
-        // ACCIÓN: CREAR
-        if (accion === 'CREAR_TICKET' && ticketData?.asunto) {
-            const nuevoTicket = await Ticket.create({
-                asunto: ticketData.asunto,
-                descripcion: ticketData.descripcion || "Sin descripción adicional",
-                ubicacion: ticketData.ubicacion || "No especificada",
-                userTelefono: telefono,
-                estado: 'abierto',
-                historial: [] 
-            });
-
-            const ticketConData = await Ticket.findByPk(nuevoTicket.id, {
-                include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
-            });
-
-            if (io) io.emit('nuevo-ticket', ticketConData);
-            await msg.reply(`✅ **Ticket #${nuevoTicket.id} generado.**`);
+        if (accion === 'NINGUNA' || !accion) {
+            // Solo respondemos, no hay accion pendiente
+            await msg.reply(resultadoIA.respuesta);
+            return;
         }
 
-        // ACCIÓN: EDITAR / CERRAR
-        if ((accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') && ticketData?.id) {
-            const ticket = await Ticket.findByPk(ticketData.id);
+        // Si YA hay una confirmacion pendiente del usuario (fallback conversacional)
+        const pendienteConfirmacion = user.context?.pendienteConfirmacion;
+        if (pendienteConfirmacion && accion === pendienteConfirmacion.accionOriginal) {
+            // Verificamos si el mensaje del usuario indica confirmacion
+            const msgLower = msg.body.toLowerCase();
+            const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
+            const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
 
-            if (ticket) {
-                const nuevaNota = {
-                    fecha: new Date().toLocaleString('es-AR'),
-                    autor: user.nombreCompleto || 'Usuario', // <--- Usamos nombreCompleto
-                    nota: ticketData.comentario || (accion === 'CERRAR_TICKET' ? "Ticket cerrado." : "Nota añadida.")
-                };
+            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+            user.changed('context', true);
 
-                ticket.historial = [...(Array.isArray(ticket.historial) ? ticket.historial : []), nuevaNota];
-                if (accion === 'CERRAR_TICKET') ticket.estado = 'cerrado';
-                
-                await ticket.save();
-
-                const ticketActualizado = await Ticket.findByPk(ticket.id, {
-                    include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
-                });
-
-                if (io) io.emit('ticket-actualizado', ticketActualizado);
-                await msg.reply(`✅ **Ticket #${ticket.id} actualizado.**`);
+            if (cancela) {
+                await msg.reply('Entendido, se cancelo la accion.');
+                return;
             }
+
+            if (confirma) {
+                const datos = pendienteConfirmacion.datos;
+                await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
+                return;
+            }
+
+            // Si no confirma ni cancela claramente, pedimos de nuevo
+            await msg.reply('Por favor, respondé *SI* para confirmar o *NO* para cancelar.');
+            return;
         }
 
+        // Si la IA quiere ejecutar una accion pero no hay confirmacion previa, guardamos en contexto y pedimos confirmacion
+        if (accion === 'CREAR_TICKET' || accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') {
+            user.context = {
+                ...(user.context || {}),
+                pendienteConfirmacion: {
+                    accionOriginal: accion,
+                    datos: { accion, ticketData }
+                }
+            };
+            user.changed('context', true);
+            await user.save();
+
+            // Mostramos resumen y pedimos confirmacion
+            let resumen = '';
+            if (accion === 'CREAR_TICKET') {
+                resumen = `Resumen del ticket a crear:\n\n` +
+                    `📌 Asunto: ${ticketData?.asunto}\n` +
+                    `📝 Descripcion: ${ticketData?.descripcion}\n` +
+                    `📍 Ubicacion: ${ticketData?.ubicacion}\n\n` +
+                    `Respondé *SI* para confirmar o *NO* para cancelar.`;
+            } else if (accion === 'AGREGAR_COMENTARIO') {
+                resumen = `Vas a agregar un comentario al ticket *#${ticketData?.id}*: "${ticketData?.asunto}"\n\n` +
+                    `💬 Comentario: "${ticketData?.comentario}"\n\n` +
+                    `Respondé *SI* para confirmar o *NO* para cancelar.`;
+            } else if (accion === 'CERRAR_TICKET') {
+                resumen = `Vas a cerrar el ticket *#${ticketData?.id}*: "${ticketData?.asunto}"\n\n` +
+                    `Respondé *SI* para confirmar o *NO* para cancelar.`;
+            }
+
+            await msg.reply(resumen);
+            return;
+        }
+
+        // Si no es ninguna de las acciones anteriores, respondemos normal
+        await msg.reply(resultadoIA.respuesta);
     } catch (error) {
         console.error('❌ Error:', error);
     } finally {

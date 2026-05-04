@@ -1,4 +1,5 @@
 import { User, Sector, Ticket, Role } from '../models/models.js';
+import { ejecutarAccion } from './actions.js';
 
 /**
  * SISTEMA DE COMMANDS DIRECTOS (SIN IA)
@@ -10,8 +11,51 @@ interface CommandResult {
     reply?: string;
 }
 
+/**
+ * Normaliza el historial: si es string JSON, lo parsea.
+ * Si es null/undefined, devuelve array vacio.
+ */
+const getHistorial = (ticket: any): any[] => {
+    if (!ticket.historial) return [];
+    if (Array.isArray(ticket.historial)) return ticket.historial;
+    if (typeof ticket.historial === 'string') {
+        try {
+            const parsed = JSON.parse(ticket.historial);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};
+
 export const processCommand = async (msg: any, user: any): Promise<CommandResult> => {
     const texto = msg.body.trim();
+
+    // Confirmacion pendiente de una accion de IA (SI/NO)
+    const pendiente = user.context?.pendienteConfirmacion;
+    if (pendiente) {
+        const respuesta = texto.toLowerCase();
+        const confirmaciones = ['si', 'sí', 'confirmo', 'confirmar', 'dale', 'ok', 'dale que si'];
+        const cancelaciones = ['no', 'cancelo', 'cancelar', 'no quiero', 'dale que no'];
+
+        if (confirmaciones.some(c => respuesta === c || respuesta.includes(c))) {
+            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+            user.changed('context', true);
+            await user.save();
+
+            // Importamos ejecutarAccion desde actions
+            await ejecutarAccion(msg, user, user.telefono, pendiente.accion, pendiente.datos.ticketData);
+            return { handled: true };
+        }
+
+        if (cancelaciones.some(c => respuesta === c || respuesta.includes(c))) {
+            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+            user.changed('context', true);
+            await user.save();
+            return { handled: true, reply: 'Entendido, se cancelo la accion.' };
+        }
+    }
 
     // Comando: /ayuda
     if (texto === '/ayuda' || texto === '/help') {
@@ -71,6 +115,7 @@ Tambien podes:
             return { handled: true, reply: `No se encontro el ticket #${ticketId}.` };
         }
 
+        const historial = getHistorial(ticket);
         const emoji = ticket.estado === 'abierto' ? '🟠' : ticket.estado === 'en_proceso' ? '🔵' : '🟢';
         return {
             handled: true,
@@ -81,7 +126,7 @@ Estado: ${ticket.estado.replace('_', ' ').toUpperCase()}
 Prioridad: ${ticket.prioridad}
 Ubicacion: ${ticket.ubicacion}
 
-${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.historial.slice(-2).map((h: any) => `- ${h.fecha}: ${h.nota}`).join('\n') : 'Sin notas registradas.'}`
+${historial.length > 0 ? 'Ultimas notas:\n' + historial.slice(-2).map((h: any) => `- ${h.fecha}: ${h.nota}`).join('\n') : 'Sin notas registradas.'}`
         };
     }
 
@@ -106,6 +151,7 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
             return { handled: true, reply: `El ticket #${ticketId} ya esta cerrado.` };
         }
 
+        const historial = getHistorial(ticket);
         const notaCierre = {
             fecha: new Date().toLocaleString('es-AR'),
             autor: user.nombreCompleto || 'Usuario',
@@ -113,7 +159,7 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
         };
 
         ticket.estado = 'cerrado';
-        ticket.historial = [...(Array.isArray(ticket.historial) ? ticket.historial : []), notaCierre];
+        ticket.historial = [...historial, notaCierre];
         ticket.changed('historial', true);
         await ticket.save();
 
@@ -130,11 +176,25 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
         };
     }
 
-    // Patron: "ticket #[id] [comentario]" -> Agregar comentario directo
-    const matchTicket = texto.match(/^ticket\s*#?(\d+)\s+(.+)/i);
+    // Frases de cierre (se usa en el patron de comentarios y en el de cierre directo)
+    const frasesCierre = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado'];
+
+    // Patron: detectar referencia a ticket + comentario directo
+    // Ejemplos: "ticket #5 comentario", "el 5 sigue roto", "agrega al ticket 3 que..."
+    const matchTicket = texto.match(/(?:ticket\s*#?|ticket|#)(\d+)\s*[,\-:]?\s*(.+)/i);
     if (matchTicket) {
         const ticketId = parseInt(matchTicket[1], 10);
         const comentario = matchTicket[2].trim();
+
+        // Ignorar si el texto parece un comando (/estado, /cerrar)
+        if (texto.startsWith('/')) {
+            return { handled: false };
+        }
+
+        // Ignorar si parece un cierre ("5 se arreglo")
+        if (frasesCierre.some(f => comentario.toLowerCase().includes(f))) {
+            return { handled: false };
+        }
 
         const ticket = await Ticket.findOne({
             where: { id: ticketId, userTelefono: user.telefono }
@@ -148,13 +208,14 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
             return { handled: true, reply: `El ticket #${ticketId} esta cerrado. Si necesitas ayuda, crea un ticket nuevo.` };
         }
 
+        const historial = getHistorial(ticket);
         const nuevaNota = {
             fecha: new Date().toLocaleString('es-AR'),
             autor: user.nombreCompleto || 'Usuario',
             nota: comentario
         };
 
-        ticket.historial = [...(Array.isArray(ticket.historial) ? ticket.historial : []), nuevaNota];
+        ticket.historial = [...historial, nuevaNota];
         ticket.changed('historial', true);
         await ticket.save();
 
@@ -171,7 +232,6 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
     }
 
     // Patron: "se arreglo", "ya funciona", "ya esta listo" -> Cerrar ticket mas reciente
-    const frasesCierre = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado'];
     if (frasesCierre.some(frase => texto.toLowerCase().includes(frase))) {
         const ticketReciente = await Ticket.findOne({
             where: {
@@ -215,13 +275,14 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
         if (respuesta === 'si' || respuesta === 'sí' || respuesta === 'confirmo' || respuesta === 'confirmar') {
             const ticket = await Ticket.findByPk(ticketId);
             if (ticket && ticket.estado !== 'cerrado') {
+                const historial = getHistorial(ticket);
                 const notaCierre = {
                     fecha: new Date().toLocaleString('es-AR'),
                     autor: user.nombreCompleto || 'Usuario',
                     nota: 'Ticket cerrado por el usuario.'
                 };
                 ticket.estado = 'cerrado';
-                ticket.historial = [...(Array.isArray(ticket.historial) ? ticket.historial : []), notaCierre];
+                ticket.historial = [...historial, notaCierre];
                 ticket.changed('historial', true);
                 await ticket.save();
 
@@ -234,35 +295,6 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
             return { handled: true, reply: `✅ Ticket *#${ticketId}* cerrado correctamente.` };
         } else {
             return { handled: true, reply: 'OK, el ticket sigue abierto. Si necesitas algo más, avisanos.' };
-        }
-    }
-
-    // Patron: "SI" despues de notificacion de comentario -> Mostrar ticket
-    // Detectamos si hay tickets con comentarios recientes del tecnico
-    if (texto.toLowerCase() === 'si' || texto.toLowerCase() === 'sí') {
-        const ticketsConNotas = await Ticket.findAll({
-            where: {
-                userTelefono: user.telefono,
-                estado: ['abierto', 'en_proceso']
-            },
-            order: [['updatedAt', 'DESC']],
-            limit: 1
-        });
-
-        const ticket = ticketsConNotas[0];
-        if (ticket && ticket.historial && ticket.historial.length > 0) {
-            const historialTexto = ticket.historial.map((h: any) =>
-                `📝 *${h.autor}* (${h.fecha}):\n${h.nota}`
-            ).join('\n\n');
-
-            return {
-                handled: true,
-                reply: `*Ticket #${ticket.id}*: ${ticket.asunto}
-Estado: ${ticket.estado.replace('_', ' ').toUpperCase()}
-Ubicacion: ${ticket.ubicacion}
-
-${historialTexto}`
-            };
         }
     }
 
