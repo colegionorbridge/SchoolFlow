@@ -9,7 +9,7 @@ const client = new Client({
     }),
     puppeteer: {
     headless: true,
-    dumpio: true,
+    dumpio: false,
     args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
