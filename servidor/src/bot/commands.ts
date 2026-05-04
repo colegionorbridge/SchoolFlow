@@ -249,10 +249,8 @@ ${ticket.historial && ticket.historial.length > 0 ? 'Ultimas notas:\n' + ticket.
             limit: 1
         });
 
-        if (ticketsConNotas.length > 0 && ticketsConNotas[0].historial && ticketsConNotas[0].historial.length > 0) {
-            const ticket = ticketsConNotas[0];
-            const ultimaNota = ticket.historial[ticket.historial.length - 1];
-
+        const ticket = ticketsConNotas[0];
+        if (ticket && ticket.historial && ticket.historial.length > 0) {
             const historialTexto = ticket.historial.map((h: any) =>
                 `📝 *${h.autor}* (${h.fecha}):\n${h.nota}`
             ).join('\n\n');
