@@ -31,6 +31,7 @@ const getHistorial = (ticket: any): any[] => {
 
 export const processCommand = async (msg: any, user: any): Promise<CommandResult> => {
     const texto = msg.body.trim();
+    const textoLower = texto.toLowerCase();
 
     // Confirmacion pendiente de una accion de IA (SI/NO)
     const pendiente = user.context?.pendienteConfirmacion;
@@ -61,6 +62,12 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
             await user.save();
             return { handled: true, reply: 'Entendido, se cancelo la accion.' };
         }
+    }
+
+    // Detección de cortesía (gracias, perfecto, ok) - después de confirmaciones pendientes
+    const cortesias = ['gracias', 'muchas gracias', 'perfecto', 'genial', 'de nada'];
+    if (cortesias.some(c => textoLower === c || textoLower.includes(c))) {
+        return { handled: true, reply: '¡De nada! Si necesitás algo más, avisame 😊' };
     }
 
     // Comando: /ayuda

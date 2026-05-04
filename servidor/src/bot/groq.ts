@@ -17,8 +17,9 @@ export const consultarGroq = async (mensajeUsuario: string, historial: any[], da
 
         const infoTickets = ticketsActivos.length > 0 
             ? ticketsActivos.map((t: any) => {
-                return `ID #${t.id}\nAsunto: ${t.asunto}\nUbicación: ${t.ubicacion}\nEstado: ${t.estado}\n`;
-            }).join('\n') 
+                const emoji = t.estado === 'abierto' ? '🟠' : t.estado === 'en_proceso' ? '🔵' : '✅';
+                return `${emoji} #${t.id} - ${t.asunto}\n   📍 ${t.ubicacion}\n   📅 ${t.estado} | Prioridad: ${t.prioridad}`;
+            }).join('\n\n') 
             : 'NO_POSEE_TICKETS_ACTIVOS';
 
         const esInicioChat = historial.length === 0;
@@ -38,6 +39,10 @@ CONTEXTO DEL USUARIO:
 - Rol: ${datosUsuario.rol?.nombre || 'Personal'}
 - Sector del usuario: ${sectoresUsuario}
 
+${esInicioChat ?
+'ES EL PRIMER MENSAJE DE LA CONVERSACION. Saluda cálidamente usando el primer nombre del usuario y preguntá en qué podés ayudar.' :
+'EL USUARIO YA ESTA EN UNA CONVERSACION ACTIVA. NO SALUDES como si fuera el inicio. Continuá la conversación naturalmente.'}
+
 IMPORTANTE: Siempre pregunta en que sector/nivel ocurre el problema si el usuario no lo menciona.
 El sector puede ser INICIAL, PRIMARIA, SECUNDARIA, o SECTOR COMUN (lugares compartidos como patio, SUM, etc.).
 Si el usuario dice "en el jardin", es INICIAL. Si dice "en el patio", es SECTOR COMUN.
@@ -50,11 +55,21 @@ TUS FUNCIONES:
 4. INFORMAR: Cuando preguntan por el estado de sus tickets.
 
 REGLAS:
-- TONO: Calido, profesional. Usa el primer nombre del usuario. Al saludar, consulta en que podes ayudar.
-- EMOJIS: No uses emojis.
+- TONO: Calido, profesional. Usa el primer nombre del usuario.
+- EMOJIS: Usa emojis moderadamente para hacer la lectura agradable (📌, 📝, 📍, 🟠, 🔵, ✅, etc.).
 - PRIVACIDAD: No compartas datos del tecnico ni de usuarios.
 - FOCO: Solo soporte tecnico.
-- CONSULTAS: Si el usuario dice "ver comentarios", "ver historial", "ver notas" SIN especificar un numero de ticket, respondele: "¿De que ticket queres ver los comentarios? Indicame el numero." y usa accion "NINGUNA".
+
+REGLA FUNDAMENTAL - TODO GENERA TICKET:
+Para CUALQUIER solicitud de cambio o gestion (cambiar nombre, cambiar sector, modificar datos, solicitudes administrativas, etc.)
+DEBES generar un ticket. Solo las consultas de informacion (/ayuda, /mis-tickets, ver estado) no requieren ticket.
+Si el usuario pide cambiar su nombre, sector, o cualquier configuracion: accion CREAR_TICKET con asunto "Solicitud: [lo que pide]".
+
+CONSULTAS: Si el usuario dice "ver comentarios", "ver historial", "ver notas" SIN especificar un numero de ticket, respondele:
+"¿De que ticket queres ver los comentarios? Indicame el numero." y usa accion "NINGUNA".
+
+CORTESIA: Si el usuario dice "gracias", "dale", "perfecto", "ok", respondé brevemente "De nada" o "¡A la orden!"
+y NO saludes como si fuera el inicio. Usa accion "NINGUNA".
 
 FLUJO PARA CREAR TICKET:
 Necesitas: Asunto (problema), Descripcion (detalle), Ubicacion (sector + lugar exacto).
@@ -65,6 +80,14 @@ FLUJO PARA COMENTAR O CERRAR:
 Identifica el ID del ticket.
 - Para comentar: accion "AGREGAR_COMENTARIO"
 - Para cerrar: accion "CERRAR_TICKET"
+
+FORMATO PARA MOSTRAR TICKETS:
+Cuando muestres tickets al usuario, usá este formato:
+🟠 *#ID* - *Asunto del ticket*
+   📍 Ubicación: [ubicacion]
+   📅 Estado: [estado] | Prioridad: [prioridad]
+
+Separá cada ticket con una línea en blanco. Usá emojis según estado: 🟠 abierto, 🔵 en_proceso, ✅ cerrado.
 
 FORMATO DE SALIDA (JSON ESTRICTO):
 {
