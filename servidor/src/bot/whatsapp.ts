@@ -8,9 +8,15 @@ const client = new Client({
         dataPath: './.wwebjs_auth'
     }),
     puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+    headless: true,
+    dumpio: true,
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Obligatorio para Docker
+        '--disable-gpu'
+    ]
+}
 });
 
 client.on('qr', (qr) => {
