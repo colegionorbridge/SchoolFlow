@@ -1,6 +1,7 @@
 import { User, Role, Sector, Ticket } from '../models/models.js';
 import { consultarGroq } from './groq.js';
 import { manejarRegistro } from './registro.js';
+import { processCommand } from './commands.js';
 import { io } from '../socket/server.js'; 
 
 // 1. Definimos la forma de la respuesta de la IA para que TS no proteste
@@ -48,6 +49,26 @@ export const handleIncomingMessage = async (msg: any) => {
         if (io) io.emit('usuario-actualizado', user);
 
         const chat = await msg.getChat();
+
+        // 2. SISTEMA DE COMMANDS DIRECTOS (SIN IA)
+        // Primero intentamos resolver como commando/flow directo para ahorrar tokens
+        const commandResult = await processCommand(msg, user);
+        if (commandResult.handled) {
+            // Limpia el flag de procesando antes de responder
+            user.context = { ...(user.context || {}), procesando: false };
+            user.changed('context', true);
+            await user.save();
+            if (io) {
+                const userFinal = await User.findByPk(user.telefono, {
+                    include: [{ model: Role, as: 'rol' }]
+                });
+                if (userFinal) io.emit('usuario-actualizado', userFinal);
+            }
+            await msg.reply(commandResult.reply!);
+            return;
+        }
+
+        // 3. Si no es un comando, usamos IA
         const mensajesPrevios = await chat.fetchMessages({ limit: 10 });
 
         const historialParaIA = mensajesPrevios

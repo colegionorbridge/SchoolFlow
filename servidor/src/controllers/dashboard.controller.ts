@@ -74,16 +74,22 @@ export const updateTicket = async (req: Request, res: Response) => {
             ? ticket.userTelefono 
             : `${ticket.userTelefono}@c.us`;
 
-        // Caso A: Pasa a En Proceso
+        // Caso A: Se agrego una nota/comentario (independientemente del cambio de estado)
+        if (nuevaNota && nuevaNota.trim() !== '') {
+            const msjNota = `📋 El tecnico *Alejandro* agrego un comentario a tu ticket *#${ticket.id}*: "${ticket.asunto}"\n\n💬 _"${nuevaNota.trim()}"_\n\nSi queres ver el detalle completo responde *SI*.`;
+            client.sendMessage(chatId, msjNota).catch(e => console.error("Error envio WS:", e));
+        }
+
+        // Caso B: Pasa a En Proceso
         if (estado === 'en_proceso' && estadoAnterior !== 'en_proceso') {
-            const msjProceso = `Hola! 👋 Te informamos que tu ticket *#${ticket.id}* ("${ticket.asunto}") ya está *en proceso de reparación*.`;
-            client.sendMessage(chatId, msjProceso).catch(e => console.error("Error envío WS:", e));
+            const msjProceso = `Hola! Te informamos que tu ticket *#${ticket.id}* ("${ticket.asunto}") ya esta *en proceso de reparacion*.`;
+            client.sendMessage(chatId, msjProceso).catch(e => console.error("Error envio WS:", e));
         } 
         
-        // Caso B: Se cierra el Ticket
-        else if (estado === 'cerrado' && estadoAnterior !== 'cerrado') {
-            const msjCierre = `✅ Tu ticket *#${ticket.id}* ("${ticket.asunto}") ha sido *finalizado*. \n\nSi el problema persiste, podés abrir uno nuevo. ¡Gracias!`;
-            client.sendMessage(chatId, msjCierre).catch(e => console.error("Error envío WS:", e));
+        // Caso C: Se cierra el Ticket
+        if (estado === 'cerrado' && estadoAnterior !== 'cerrado') {
+            const msjCierre = `✅ Tu ticket *#${ticket.id}* ("${ticket.asunto}") ha sido *finalizado*. \n\nSi el problema persiste, podes abrir uno nuevo. Gracias!`;
+            client.sendMessage(chatId, msjCierre).catch(e => console.error("Error envio WS:", e));
         }
 
         // 4. Buscamos el ticket completo para sincronizar el Dashboard
