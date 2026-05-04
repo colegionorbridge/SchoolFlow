@@ -312,6 +312,11 @@ ${notasTexto}`
 
     // Patron: "se arreglo", "ya funciona", "ya esta listo" -> Cerrar ticket mas reciente
     if (frasesCierre.some(frase => texto.toLowerCase().includes(frase))) {
+        // Si ya hay una confirmacion pendiente, no sobreescribir
+        if (user.context?.esperandoCierreConfirmacion || user.context?.pendienteConfirmacion) {
+            return { handled: false };
+        }
+
         const ticketReciente = await Ticket.findOne({
             where: {
                 userTelefono: user.telefono,

@@ -65,7 +65,10 @@ export const handleIncomingMessage = async (msg: any) => {
                 });
                 if (userFinal) io.emit('usuario-actualizado', userFinal);
             }
-            await msg.reply(commandResult.reply!);
+            // Solo enviamos reply si existe (ejecutarAccion ya envio su propio mensaje)
+            if (commandResult.reply) {
+                await msg.reply(commandResult.reply);
+            }
             return;
         }
 
@@ -98,17 +101,23 @@ export const handleIncomingMessage = async (msg: any) => {
             const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
             const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
 
-            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
-            user.changed('context', true);
-
             if (cancela) {
+                user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+                user.changed('context', true);
+                await user.save();
                 await msg.reply('Entendido, se cancelo la accion.');
                 return;
             }
 
             if (confirma) {
                 const datos = pendienteConfirmacion.datos;
-                await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
+                try {
+                    await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
+                } finally {
+                    user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+                    user.changed('context', true);
+                    await user.save();
+                }
                 return;
             }
 
