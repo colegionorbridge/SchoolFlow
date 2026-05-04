@@ -128,6 +128,7 @@ export const handleIncomingMessage = async (msg: any) => {
 
         // Si la IA quiere ejecutar una accion pero no hay confirmacion previa, guardamos en contexto y pedimos confirmacion
         if (accion === 'CREAR_TICKET' || accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') {
+            console.log('📋 [Confirmacion] Guardando pendiente:', accion, '| ticketData:', JSON.stringify(ticketData));
             user.context = {
                 ...(user.context || {}),
                 pendienteConfirmacion: {

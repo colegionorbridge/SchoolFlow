@@ -8,7 +8,16 @@ export async function ejecutarAccion(
     accion: string,
     ticketData: any
 ) {
-    if (accion === 'CREAR_TICKET' && ticketData?.asunto) {
+    console.log('🔧 [ejecutarAccion] accion:', accion, '| ticketData:', JSON.stringify(ticketData));
+
+    if (accion === 'CREAR_TICKET') {
+        if (!ticketData?.asunto) {
+            console.warn('⚠️ [ejecutarAccion] CREAR_TICKET sin asunto. ticketData:', JSON.stringify(ticketData));
+            await msg.reply('❌ No se pudo crear el ticket porque falta el asunto.');
+            return;
+        }
+
+        console.log('📝 [ejecutarAccion] Creando ticket:', ticketData.asunto);
         const nuevoTicket = await Ticket.create({
             asunto: ticketData.asunto,
             descripcion: ticketData.descripcion || "Sin descripcion adicional",
@@ -17,6 +26,8 @@ export async function ejecutarAccion(
             estado: 'abierto',
             historial: []
         });
+
+        console.log('✅ [ejecutarAccion] Ticket creado con ID:', nuevoTicket.id);
 
         const ticketConData = await Ticket.findByPk(nuevoTicket.id, {
             include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]

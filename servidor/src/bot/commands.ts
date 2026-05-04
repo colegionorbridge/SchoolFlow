@@ -35,6 +35,7 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
     // Confirmacion pendiente de una accion de IA (SI/NO)
     const pendiente = user.context?.pendienteConfirmacion;
     if (pendiente) {
+        console.log('📋 [Commands] Hay confirmacion pendiente:', JSON.stringify(pendiente));
         const respuesta = texto.toLowerCase();
         const confirmaciones = ['si', 'sí', 'confirmo', 'confirmar', 'dale', 'ok', 'dale que si'];
         const cancelaciones = ['no', 'cancelo', 'cancelar', 'no quiero', 'dale que no'];
@@ -44,7 +45,13 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
             user.changed('context', true);
             await user.save();
 
-            await ejecutarAccion(msg, user, user.telefono, pendiente.accion, pendiente.datos.ticketData);
+            try {
+                console.log('🔧 [Confirmacion] Ejecutando accion:', pendiente.accion, 'con datos:', JSON.stringify(pendiente.datos.ticketData));
+                await ejecutarAccion(msg, user, user.telefono, pendiente.accion, pendiente.datos.ticketData);
+            } catch (error) {
+                console.error('❌ [Confirmacion] Error ejecutando accion:', error);
+                await msg.reply('❌ Hubo un error al procesar tu solicitud. Intenta de nuevo.');
+            }
             return { handled: true };
         }
 
