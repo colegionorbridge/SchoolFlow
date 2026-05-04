@@ -44,7 +44,6 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
             user.changed('context', true);
             await user.save();
 
-            // Importamos ejecutarAccion desde actions
             await ejecutarAccion(msg, user, user.telefono, pendiente.accion, pendiente.datos.ticketData);
             return { handled: true };
         }
@@ -65,12 +64,14 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
 
 /mis-tickets - Ver tus tickets activos
 /estado [id] - Ver estado de un ticket (ej: /estado 5)
+/comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)
 /cerrar [id] - Cerrar un ticket (ej: /cerrar 3)
 /ayuda - Mostrar esta lista
 
 Tambien podes:
 - Reportar un problema nuevo escribiendolo normalmente
 - Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"
+- Decir "ver comentarios del 5" para ver el historial
 - Decir "se arreglo" o "ya funciona" para cerrar un ticket`
         };
     }
@@ -130,6 +131,70 @@ ${historial.length > 0 ? 'Ultimas notas:\n' + historial.slice(-2).map((h: any) =
         };
     }
 
+    // Comando: /comentarios [id] o /historial [id]
+    if (texto.startsWith('/comentarios ') || texto.startsWith('/comentarios#') || texto.startsWith('/historial ') || texto.startsWith('/historial#')) {
+        const idStr = texto.split(/[\s#]+/)[1];
+        const ticketId = parseInt(idStr, 10);
+
+        if (isNaN(ticketId)) {
+            return { handled: true, reply: 'Formato incorrecto. Usá: /comentarios [numero]' };
+        }
+
+        const ticket = await Ticket.findOne({
+            where: { id: ticketId, userTelefono: user.telefono }
+        });
+
+        if (!ticket) {
+            return { handled: true, reply: `No se encontro el ticket #${ticketId}.` };
+        }
+
+        const historial = getHistorial(ticket);
+        if (historial.length === 0) {
+            return { handled: true, reply: `El ticket *#${ticket.id}* no tiene notas registradas.` };
+        }
+
+        const notasTexto = historial.map((h: any, i: number) =>
+            `*${i + 1}.* ${h.autor} (${h.fecha}):\n${h.nota}`
+        ).join('\n\n');
+
+        return {
+            handled: true,
+            reply: `📋 *Historial del ticket #${ticket.id}*: "${ticket.asunto}"
+
+${notasTexto}`
+        };
+    }
+
+    // Patron natural: "ver comentarios del ticket X", "historial del 5", "ver notas del ticket 3"
+    const matchVerComentarios = texto.match(/(?:ver|mostrar|leer|consultar)\s*(?:los\s*)?(?:comentarios?|notas?|historial|seguimiento)(?:\s*del\s*|\s*de\s*|)(?:ticket\s*)?#?(\d+)/i);
+    if (matchVerComentarios) {
+        const ticketId = parseInt(matchVerComentarios[1], 10);
+
+        const ticket = await Ticket.findOne({
+            where: { id: ticketId, userTelefono: user.telefono }
+        });
+
+        if (!ticket) {
+            return { handled: true, reply: `No se encontro el ticket #${ticketId}.` };
+        }
+
+        const historial = getHistorial(ticket);
+        if (historial.length === 0) {
+            return { handled: true, reply: `El ticket *#${ticket.id}* no tiene notas registradas.` };
+        }
+
+        const notasTexto = historial.map((h: any, i: number) =>
+            `*${i + 1}.* ${h.autor} (${h.fecha}):\n${h.nota}`
+        ).join('\n\n');
+
+        return {
+            handled: true,
+            reply: `📋 *Historial del ticket #${ticket.id}*: "${ticket.asunto}"
+
+${notasTexto}`
+        };
+    }
+
     // Comando: /cerrar [id]
     if (texto.startsWith('/cerrar ') || texto.startsWith('/cerrar#')) {
         const idStr = texto.split(/[\s#]+/)[1];
@@ -179,20 +244,34 @@ ${historial.length > 0 ? 'Ultimas notas:\n' + historial.slice(-2).map((h: any) =
     // Frases de cierre (se usa en el patron de comentarios y en el de cierre directo)
     const frasesCierre = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado'];
 
+    // Palabras de consulta que indican que el usuario QUIERE VER info, NO agregar
+    const palabrasConsulta = ['ver comentarios', 'ver notas', 'ver historial', 'mostrar comentarios', 'mostrar notas', 'mostrar historial', 'leer comentarios', 'leer notas', 'leer historial', 'consultar historial', 'seguimiento del ticket'];
+
     // Patron: detectar referencia a ticket + comentario directo
     // Ejemplos: "ticket #5 comentario", "el 5 sigue roto", "agrega al ticket 3 que..."
     const matchTicket = texto.match(/(?:ticket\s*#?|ticket|#)(\d+)\s*[,\-:]?\s*(.+)/i);
     if (matchTicket) {
         const ticketId = parseInt(matchTicket[1], 10);
-        const comentario = matchTicket[2].trim();
+        const resto = matchTicket[2].trim();
 
-        // Ignorar si el texto parece un comando (/estado, /cerrar)
+        // Ignorar si el texto parece un comando
         if (texto.startsWith('/')) {
             return { handled: false };
         }
 
+        // Ignorar si parece consulta de comentarios/notas
+        if (palabrasConsulta.some(p => texto.toLowerCase().includes(p))) {
+            return { handled: false };
+        }
+
+        // Ignorar si el resto empieza con palabras de consulta
+        const inicioConsulta = ['ver', 'mostrar', 'leer', 'consultar', 'historial', 'comentarios', 'notas', 'seguimiento'];
+        if (inicioConsulta.some(p => resto.toLowerCase().startsWith(p))) {
+            return { handled: false };
+        }
+
         // Ignorar si parece un cierre ("5 se arreglo")
-        if (frasesCierre.some(f => comentario.toLowerCase().includes(f))) {
+        if (frasesCierre.some(f => resto.toLowerCase().includes(f))) {
             return { handled: false };
         }
 
@@ -212,7 +291,7 @@ ${historial.length > 0 ? 'Ultimas notas:\n' + historial.slice(-2).map((h: any) =
         const nuevaNota = {
             fecha: new Date().toLocaleString('es-AR'),
             autor: user.nombreCompleto || 'Usuario',
-            nota: comentario
+            nota: resto
         };
 
         ticket.historial = [...historial, nuevaNota];
