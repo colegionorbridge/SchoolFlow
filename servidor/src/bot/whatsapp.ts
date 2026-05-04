@@ -5,20 +5,25 @@ import { handleIncomingMessage } from './handler.js';
 
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: './.wwebjs_auth'
+        // No le pases la ruta completa aquí si ya la manejas en Docker.
+        // Deja que use la carpeta por defecto 'session'
+        clientId: "session" 
     }),
     puppeteer: {
-    headless: true,
-    dumpio: false,
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Obligatorio para Docker
-        '--disable-gpu'
-    ]
-}
+        headless: true,
+        // dumpio: true, // 👈 Cámbialo a TRUE temporalmente para ver el error real de Chrome en los logs
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process', // 👈 Ayuda mucho a reducir el uso de CPU en Docker
+            '--disable-gpu'
+        ],
+    }
 });
-
 client.on('qr', (qr) => {
     console.log('📱 [WhatsApp] Nuevo código QR. Escanealo para iniciar sesión:');
     qrcode.generate(qr, { small: true });
