@@ -46,8 +46,8 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
             await user.save();
 
             try {
-                console.log('🔧 [Confirmacion] Ejecutando accion:', pendiente.accion, 'con datos:', JSON.stringify(pendiente.datos.ticketData));
-                await ejecutarAccion(msg, user, user.telefono, pendiente.accion, pendiente.datos.ticketData);
+                console.log('🔧 [Confirmacion] Ejecutando accion:', pendiente.datos.accion, 'con datos:', JSON.stringify(pendiente.datos.ticketData));
+                await ejecutarAccion(msg, user, user.telefono, pendiente.datos.accion, pendiente.datos.ticketData);
             } catch (error) {
                 console.error('❌ [Confirmacion] Error ejecutando accion:', error);
                 await msg.reply('❌ Hubo un error al procesar tu solicitud. Intenta de nuevo.');

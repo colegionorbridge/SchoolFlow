@@ -31,14 +31,16 @@ client.on('disconnected', (reason) => {
     console.log(`⚠️ [WhatsApp] Desconectado: ${reason}`);
 });
 
-// Timeout de seguridad: si en 30 segundos no hay QR ni ready, la sesión esta corrupta
+
+// Timeout de seguridad: aumentado a 90 segundos para dar margen a Docker
 let conectado = false;
 setTimeout(() => {
     if (!conectado) {
-        console.warn('⚠️ [WhatsApp] Timeout: no se pudo cargar la sesión en 30s. La sesión puede estar corrupta.');
-        console.warn('⚠️ [WhatsApp] Ejecutá: sudo rm -rf .wwebjs_auth/* y reiniciá el contenedor.');
+        console.warn('⚠️ [WhatsApp] El bot está tardando más de lo esperado en iniciar...');
+        console.warn('💡 Si ya escaneaste el QR antes, dale 1 minuto más. Si es la primera vez, espera al QR.');
+        console.warn('💡 Si el problema persiste, verifica permisos con: sudo chown -R 1000:1000 .wwebjs_auth');
     }
-}, 30000);
+}, 90000); // <-- Cambiado de 30000 a 90000 (90 segundos)
 
 client.on('qr', () => { conectado = true; });
 client.on('ready', () => { conectado = true; });
