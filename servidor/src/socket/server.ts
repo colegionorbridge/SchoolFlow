@@ -13,7 +13,7 @@ export const initSocket = (httpServer: HttpServer) => {
             origin: [frontendUrl, 'http://localhost:5173', apiUrl],
             methods: ["GET", "POST"]
         },
-        transports: ['polling'],
+        transports: ['websocket'],
         allowUpgrades: false
     });
 
