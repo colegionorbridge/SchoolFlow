@@ -42,6 +42,7 @@ interface Usuario {
 interface Rol {
   id: number;
   nombre: string;
+  codigoAcceso: string | null;
 }
 
 interface Sector {
