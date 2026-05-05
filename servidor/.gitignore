@@ -15,6 +15,10 @@ yarn-error.log*
 .env
 .env.local
 
+# WhatsApp Web JS - Carpetas de sesión
+.wwebjs_auth/
+.wwebjs_cache/
+
 # Archivos de sistema y editores
 .DS_Store
 .vscode/
