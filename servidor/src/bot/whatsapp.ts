@@ -12,7 +12,8 @@ const client = new Client({
   puppeteer: {
         headless: true,
         dumpio: true, // 👈 IMPORTANTE: Activá esto para ver errores ocultos de Chrome
-        executablePath: '/usr/bin/google-chrome', // 👈 Ajustá esta ruta si usas chromium-browser
+        // Usa la variable de entorno CHROME_PATH, si no existe usa la ruta por defecto
+        executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
