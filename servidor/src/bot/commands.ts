@@ -34,8 +34,7 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
     const texto = msg.body.trim();
     const textoLower = texto.toLowerCase();
 
-    // Confirmacion pendiente de una accion de IA (SI/NO) - Manejado en handler.ts
-    // Solo manejamos aquí si viene de commands (esperandoCierreConfirmacion)
+    // Confirmacion pendiente de cierre (desde commands) - Usar mismo formato que IA
     const esperandoCierre = user.context?.esperandoCierreConfirmacion;
     if (esperandoCierre) {
         const respuesta = texto.toLowerCase();
@@ -43,36 +42,21 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
         const cancelaciones = ['no', 'cancelo', 'cancelar', 'no quiero'];
 
         if (confirmaciones.some(c => respuesta === c || respuesta.includes(c))) {
-            user.context = { ...(user.context || {}), esperandoCierreConfirmacion: null };
+            // Unificar con el sistema de pendienteConfirmacion de handler.ts
+            user.context = {
+                ...(user.context || {}),
+                esperandoCierreConfirmacion: null,
+                pendienteConfirmacion: {
+                    accionOriginal: 'CERRAR_TICKET',
+                    datos: {
+                        accion: 'CERRAR_TICKET',
+                        ticketData: { id: esperandoCierre.ticketId }
+                    }
+                }
+            };
             user.changed('context', true);
             await user.save();
-
-            try {
-                const { ticketId } = esperandoCierre;
-                const ticket = await Ticket.findByPk(ticketId);
-                if (ticket && ticket.estado !== 'cerrado') {
-                    const historial = getHistorial(ticket);
-                    const notaCierre = {
-                        fecha: new Date().toLocaleString('es-AR'),
-                        autor: user.nombreCompleto || 'Usuario',
-                        nota: 'Ticket cerrado por el usuario.'
-                    };
-                    ticket.estado = 'cerrado';
-                    ticket.historial = [...historial, notaCierre];
-                    ticket.changed('historial', true);
-                    await ticket.save();
-
-                    const { io } = await import('../socket/server.js');
-                    const ticketActualizado = await Ticket.findByPk(ticket.id, {
-                        include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
-                    });
-                    if (io) io.emit('ticket-actualizado', ticketActualizado);
-                }
-                return { handled: true, reply: `✅ Ticket *#${ticketId}* cerrado correctamente.` };
-            } catch (error) {
-                console.error('❌ [Confirmacion] Error:', error);
-                return { handled: true, reply: '❌ Hubo un error al cerrar el ticket.' };
-            }
+            return { handled: true, reply: `✅ Ticket *#${esperandoCierre.ticketId}* cerrado correctamente.` };
         }
 
         if (cancelaciones.some(c => respuesta === c || respuesta.includes(c))) {
@@ -302,9 +286,35 @@ ${notasTexto}`
             return { handled: false };
         }
 
-        // Ignorar si parece un cierre ("5 se arreglo")
+        // Si parece un cierre ("5 se arreglo"), manejar cierre con este ID específico
         if (frasesCierre.some(f => resto.toLowerCase().includes(f))) {
-            return { handled: false };
+            const ticketParaCerrar = await Ticket.findOne({
+                where: { id: ticketId, userTelefono: user.telefono }
+            });
+
+            if (!ticketParaCerrar) {
+                return { handled: true, reply: `No se encontro el ticket #${ticketId} asociado a tu numero.` };
+            }
+
+            if (ticketParaCerrar.estado === 'cerrado') {
+                return { handled: true, reply: `El ticket #${ticketId} ya esta cerrado.` };
+            }
+
+            // Confirmar antes de cerrar usando el ID específico
+            user.context = {
+                ...(user.context || {}),
+                esperandoCierreConfirmacion: {
+                    ticketId: ticketParaCerrar.id,
+                    asunto: ticketParaCerrar.asunto
+                }
+            };
+            user.changed('context', true);
+            await user.save();
+
+            return {
+                handled: true,
+                reply: `¿Queres cerrar el ticket *#${ticketParaCerrar.id}*: "${ticketParaCerrar.asunto}"?\n\nRespondé *SI* para confirmar o *NO* para cancelar.`
+            };
         }
 
         const ticket = await Ticket.findOne({
@@ -346,7 +356,7 @@ ${notasTexto}`
     // Patron: "se arreglo", "ya funciona", "ya esta listo" -> Cerrar ticket mas reciente
     if (frasesCierre.some(frase => texto.toLowerCase().includes(frase))) {
         // Si ya hay una confirmacion pendiente, no sobreescribir
-        if (user.context?.esperandoCierreConfirmacion || user.context?.pendienteConfirmacion) {
+        if (user.context?.pendienteConfirmacion) {
             return { handled: false };
         }
 
@@ -362,12 +372,15 @@ ${notasTexto}`
             return { handled: false }; // No hay ticket, dejar que IA responda
         }
 
-        // Confirmar antes de cerrar
+        // Usar el mismo sistema que handler.ts
         user.context = {
             ...(user.context || {}),
-            esperandoCierreConfirmacion: {
-                ticketId: ticketReciente.id,
-                asunto: ticketReciente.asunto
+            pendienteConfirmacion: {
+                accionOriginal: 'CERRAR_TICKET',
+                datos: {
+                    accion: 'CERRAR_TICKET',
+                    ticketData: { id: ticketReciente.id, asunto: ticketReciente.asunto }
+                }
             }
         };
         user.changed('context', true);

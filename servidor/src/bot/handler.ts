@@ -28,7 +28,12 @@ export const handleIncomingMessage = async (msg: any) => {
 
     try {
         const contacto = await msg.getContact();
-        const telefono: string = contacto.number; 
+        let telefono: string = contacto.number; 
+
+        // Normalizar teléfono: agregar 549 si no está presente
+        if (!telefono.startsWith('549')) {
+            telefono = '549' + telefono;
+        }
 
         user = await User.findByPk(telefono, {
             include: [

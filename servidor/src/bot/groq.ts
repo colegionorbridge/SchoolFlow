@@ -53,6 +53,13 @@ FUNCIONES:
 3. CERRAR_TICKET: Confirman que se resolvió (necesitás: ID del ticket)
 4. INFORMAR: Consultas sobre estado de tickets
 
+EJEMPLOS DE EXTRACCION DE ID:
+- "agrega comentario al ticket 5: sigue roto" -> accion: "AGREGAR_COMENTARIO", ticketData: {id: 5, comentario: "sigue roto"}
+- "ticket 5 ya funciona" -> accion: "CERRAR_TICKET", ticketData: {id: 5}
+- "cerrar ticket 3" -> accion: "CERRAR_TICKET", ticketData: {id: 3}
+- "agregar al ticket 7 que no anda" -> accion: "AGREGAR_COMENTARIO", ticketData: {id: 7, comentario: "no anda"}
+- "el ticket 4 tiene un problema nuevo" -> accion: "AGREGAR_COMENTARIO", ticketData: {id: 4, comentario: "tiene un problema nuevo"}
+
 FLUJO PARA CREAR TICKET:
 Necesitás: Asunto (problema), Descripcion (detalle), Ubicación (sector + lugar ESPECIFICO).
 NO crees el ticket si falta el lugar específico dentro del sector.

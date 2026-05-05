@@ -40,6 +40,17 @@ export async function ejecutarAccion(
     if ((accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') && ticketData?.id) {
         const ticket = await Ticket.findByPk(ticketData.id);
 
+        if (!ticket) {
+            await msg.reply(`❌ No se encontró el ticket #${ticketData.id}.`);
+            return;
+        }
+
+        // Validar que el ticket pertenezca al usuario
+        if (ticket.userTelefono !== telefono) {
+            await msg.reply(`❌ El ticket #${ticketData.id} no está asociado a tu número.`);
+            return;
+        }
+
         if (ticket) {
             let historialActual: any[] = [];
             if (Array.isArray(ticket.historial)) {
