@@ -118,15 +118,8 @@ export const handleIncomingMessage = async (msg: any) => {
         }
 
         // 4. Si no es un comando, usamos IA
-        const chat = await msg.getChat();
-        const mensajesPrevios = await chat.fetchMessages({ limit: 10 });
-
-        const historialParaIA = mensajesPrevios
-            .filter((m: any) => m.body && m.body.trim() !== "")
-            .map((m: any) => ({
-                role: m.fromMe ? 'model' as const : 'user' as const,
-                parts: [{ text: m.body }]
-            }));
+        // NOTA: Eliminamos chat.fetchMessages() por incompatibilidad con WhatsApp Web
+        const historialParaIA: any[] = [];
 
         const resultadoIA = await consultarGroq(msg.body, historialParaIA, user) as RespuestaIA;
 

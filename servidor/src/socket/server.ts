@@ -11,16 +11,17 @@ export const initSocket = (httpServer: HttpServer) => {
     io = new SocketServer(httpServer, {
         cors: {
             origin: [frontendUrl, 'http://localhost:5173', apiUrl],
-            methods: ["GET", "POST"],
-            credentials: true
+            methods: ["GET", "POST"]
         },
-        transports: ['polling'] // Solo polling (HTTP), sin upgrades a WS
+        transports: ['polling'],
+        allowUpgrades: false
     });
 
     io.on('connection', (socket) => {
-        console.log('📱 Cliente conectado - ID:', socket.id);
+        console.log('📱 Cliente conectado al Panel de Control - ID:', socket.id);
+
         socket.on('disconnect', (reason) => {
-            console.log('👤 Desconectado - ID:', socket.id, '| Razón:', reason);
+            console.log('👤 Cliente desconectado - ID:', socket.id, '| Razón:', reason);
         });
     });
 

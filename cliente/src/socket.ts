@@ -5,6 +5,5 @@ const URL = import.meta.env.VITE_API_URL;
 
 export const socket = io(URL, {
   autoConnect: true,
-  transports: ['polling'], // Solo HTTP polling (compatible con cualquier túnel)
-  forceNew: true
+  transports: ['polling']
 });
