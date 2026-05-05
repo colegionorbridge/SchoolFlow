@@ -37,6 +37,9 @@ export const handleIncomingMessage = async (msg: any) => {
             ]
         });
 
+        // Historial de conversación para la IA (solo si el usuario existe)
+        const historialConversacion = (user && user.context?.historialConversacion) || [];
+
         if (!user || (!user.registroCompleto && !user.esAdmin)) {
             await manejarRegistro(msg, user, telefono);
             return;
@@ -71,8 +74,17 @@ export const handleIncomingMessage = async (msg: any) => {
             const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
             const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
 
+            // Obtener historial actual
+            const historialActual = user.context?.historialConversacion || [];
+
             if (cancela) {
-                user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+                const nuevoHistorial = [
+                    ...historialActual,
+                    { role: 'user', content: msg.body },
+                    { role: 'assistant', content: 'Entendido, se cancelo la accion.' }
+                ].slice(-10);
+
+                user.context = { ...(user.context || {}), pendienteConfirmacion: null, historialConversacion: nuevoHistorial };
                 user.changed('context', true);
                 await user.save();
                 await msg.reply('Entendido, se cancelo la accion.');
@@ -84,7 +96,14 @@ export const handleIncomingMessage = async (msg: any) => {
                 try {
                     await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
                 } finally {
-                    user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+                    const historialDespues = user.context?.historialConversacion || [];
+                    const nuevoHistorial = [
+                        ...historialDespues,
+                        { role: 'user', content: msg.body },
+                        { role: 'assistant', content: 'Accion confirmada y ejecutada.' }
+                    ].slice(-10);
+
+                    user.context = { ...(user.context || {}), pendienteConfirmacion: null, historialConversacion: nuevoHistorial };
                     user.changed('context', true);
                     await user.save();
                 }
@@ -100,8 +119,16 @@ export const handleIncomingMessage = async (msg: any) => {
         // Primero intentamos resolver como commando/flow directo para ahorrar tokens
         const commandResult = await processCommand(msg, user);
         if (commandResult.handled) {
+            // Guardar historial también para comandos (para mantener contexto)
+            const historialActual = user.context?.historialConversacion || [];
+            const nuevoHistorial = [
+                ...historialActual,
+                { role: 'user', content: msg.body },
+                { role: 'assistant', content: commandResult.reply || 'Comando ejecutado' }
+            ].slice(-10);
+
             // Limpia el flag de procesando antes de responder
-            user.context = { ...(user.context || {}), procesando: false };
+            user.context = { ...(user.context || {}), procesando: false, historialConversacion: nuevoHistorial };
             user.changed('context', true);
             await user.save();
             if (io) {
@@ -118,16 +145,23 @@ export const handleIncomingMessage = async (msg: any) => {
         }
 
         // 4. Si no es un comando, usamos IA
-        // NOTA: Eliminamos chat.fetchMessages() por incompatibilidad con WhatsApp Web
-        const historialParaIA: any[] = [];
-
-        const resultadoIA = await consultarGroq(msg.body, historialParaIA, user) as RespuestaIA;
+        const resultadoIA = await consultarGroq(msg.body, historialConversacion, user) as RespuestaIA;
 
         // Si la respuesta de la IA NO tiene una accion que requiera confirmacion, respondemos normal
         const { accion, ticketData } = resultadoIA;
 
         if (accion === 'NINGUNA' || !accion) {
-            // Solo respondemos, no hay accion pendiente
+            // Guardar historial y responder
+            const nuevoHistorial = [
+                ...historialConversacion,
+                { role: 'user', content: msg.body },
+                { role: 'assistant', content: resultadoIA.respuesta }
+            ].slice(-10);
+
+            user.context = { ...(user.context || {}), historialConversacion: nuevoHistorial };
+            user.changed('context', true);
+            await user.save();
+
             await msg.reply(resultadoIA.respuesta);
             return;
         }
@@ -135,17 +169,8 @@ export const handleIncomingMessage = async (msg: any) => {
         // Si la IA quiere ejecutar una accion, guardamos en contexto y pedimos confirmacion
         if (accion === 'CREAR_TICKET' || accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') {
             console.log('📋 [Confirmacion] Guardando pendiente:', accion, '| ticketData:', JSON.stringify(ticketData));
-            user.context = {
-                ...(user.context || {}),
-                pendienteConfirmacion: {
-                    accionOriginal: accion,
-                    datos: { accion, ticketData }
-                }
-            };
-            user.changed('context', true);
-            await user.save();
 
-            // Mostramos resumen y pedimos confirmacion
+            // Crear resumen para confirmacion
             let resumen = '';
             if (accion === 'CREAR_TICKET') {
                 resumen = `Resumen del ticket a crear:\n\n` +
@@ -161,6 +186,24 @@ export const handleIncomingMessage = async (msg: any) => {
                 resumen = `Vas a cerrar el ticket *#${ticketData?.id}*: "${ticketData?.asunto}"\n\n` +
                     `Respondé *SI* para confirmar o *NO* para cancelar.`;
             }
+
+            // Guardar historial con el resumen que se enviará al usuario
+            const nuevoHistorial = [
+                ...historialConversacion,
+                { role: 'user', content: msg.body },
+                { role: 'assistant', content: resumen }
+            ].slice(-10);
+
+            user.context = {
+                ...(user.context || {}),
+                pendienteConfirmacion: {
+                    accionOriginal: accion,
+                    datos: { accion, ticketData }
+                },
+                historialConversacion: nuevoHistorial
+            };
+            user.changed('context', true);
+            await user.save();
 
             await msg.reply(resumen);
             return;

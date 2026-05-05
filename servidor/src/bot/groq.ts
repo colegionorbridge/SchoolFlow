@@ -92,8 +92,8 @@ ${infoTickets}`;
         const messages = [
             { role: "system", content: instrucciones },
             ...historial.map(h => ({
-                role: h.role === 'model' || h.role === 'assistant' ? 'assistant' : 'user',
-                content: h.parts && h.parts[0] ? h.parts[0].text : (h.content || "")
+                role: h.role === 'assistant' ? 'assistant' : 'user',
+                content: h.content || ""
             })),
             { role: "user", content: mensajeUsuario }
         ];
