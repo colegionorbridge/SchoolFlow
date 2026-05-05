@@ -25,14 +25,15 @@ const client = new Client({
     }
 });
 client.on('qr', (qr) => {
+    conectado = true; // Evita que salte el timeout de advertencia
     console.log('📱 [WhatsApp] Nuevo código QR. Escanealo para iniciar sesión:');
     qrcode.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
+    conectado = true;
     console.log('✅ [WhatsApp] ¡Cliente conectado y listo!');
 });
-
 client.on('auth_failure', (msg) => {
     console.error('❌ [WhatsApp] Fallo de autenticación:', msg);
     console.log('🔄 [WhatsApp] Sesión inválida. Escaneá el nuevo QR.');

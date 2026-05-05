@@ -10,21 +10,23 @@ const apiUrl = 'https://api.alejndrogcandia.online';
 export const initSocket = (httpServer: HttpServer) => {
     io = new SocketServer(httpServer, {
         cors: {
-            origin: [frontendUrl, 'http://localhost:5173', apiUrl, '*'],
-            methods: ["GET", "POST"],
-            credentials: true
+            origin: [frontendUrl, 'http://localhost:5173', apiUrl],
+            methods: ["GET", "POST", "OPTIONS"],
+            credentials: true,
+            allowedHeaders: ["Content-Type", "Authorization"]
         },
         transports: ['polling', 'websocket'],
-        pingTimeout: 60000,
-        pingInterval: 25000,
-        allowEIO3: true
+        pingTimeout: 120000,
+        pingInterval: 30000,
+        allowUpgrades: true,
+        cookie: false
     });
 
     io.on('connection', (socket) => {
-        console.log('📱 Cliente conectado al Panel de Control - ID:', socket.id);
+        console.log('📱 Cliente conectado al Panel de Control - ID:', socket.id, '| Transport:', socket.conn?.transport?.name);
 
         socket.on('disconnect', (reason) => {
-            console.log('👤 Cliente desconectado - Razón:', reason);
+            console.log('👤 Cliente desconectado - ID:', socket.id, '| Razón:', reason);
         });
     });
 
