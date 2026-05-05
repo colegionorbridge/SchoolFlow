@@ -38,10 +38,17 @@ const Dashboard: React.FC = () => {
   // Función para actualizar el ticket en el servidor
   const handleUpdateTicket = async (id: number, updates: any) => {
     const API_URL = import.meta.env.VITE_API_URL;
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     try {
       const res = await fetch(`${API_URL}/api/tickets/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(updates)
       });
       if (!res.ok) throw new Error("Error al actualizar");
