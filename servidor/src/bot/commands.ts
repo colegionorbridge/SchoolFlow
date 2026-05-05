@@ -107,12 +107,15 @@ Tambien podes:
 
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : t.estado === 'en_proceso' ? '🔵' : '🟢';
-            return `${emoji} *#${t.id}* - ${t.asunto}\n   Estado: ${t.estado.replace('_', ' ')} | Prioridad: ${t.prioridad}`;
-        }).join('\n');
+            return `${emoji} *#${t.id}* - ${t.asunto}
+   Estado: ${t.estado.replace('_', ' ')}
+   Prioridad: ${t.prioridad}
+   Ubicación: ${t.ubicacion}`;
+        }).join('\n\n');
 
         return {
             handled: true,
-            reply: `Tus tickets recientes:\n\n${lista}`
+            reply: `📋 *Tus tickets recientes:*\n\n${lista}`
         };
     }
 
@@ -137,14 +140,12 @@ Tambien podes:
         const emoji = ticket.estado === 'abierto' ? '🟠' : ticket.estado === 'en_proceso' ? '🔵' : '🟢';
         return {
             handled: true,
-            reply: `${emoji} *Ticket #${ticket.id}*
-
-Asunto: ${ticket.asunto}
-Estado: ${ticket.estado.replace('_', ' ').toUpperCase()}
-Prioridad: ${ticket.prioridad}
-Ubicacion: ${ticket.ubicacion}
-
-${historial.length > 0 ? 'Ultimas notas:\n' + historial.slice(-2).map((h: any) => `- ${h.fecha}: ${h.nota}`).join('\n') : 'Sin notas registradas.'}`
+            reply: `${emoji} *Ticket #${ticket.id}*\n\n` +
+                `📌 Asunto: ${ticket.asunto}\n` +
+                `📊 Estado: ${ticket.estado.replace('_', ' ').toUpperCase()}\n` +
+                `🔴 Prioridad: ${ticket.prioridad}\n` +
+                `📍 Ubicación: ${ticket.ubicacion}\n\n` +
+                `${historial.length > 0 ? '📝 *Últimas notas:*\n' + historial.slice(-2).map((h: any) => `• ${h.fecha}: ${h.nota}`).join('\n') : 'Sin notas registradas.'}`
         };
     }
 
@@ -262,6 +263,11 @@ ${notasTexto}`
 
     // Palabras de consulta que indican que el usuario QUIERE VER info, NO agregar
     const palabrasConsulta = ['ver comentarios', 'ver notas', 'ver historial', 'mostrar comentarios', 'mostrar notas', 'mostrar historial', 'leer comentarios', 'leer notas', 'leer historial', 'consultar historial', 'seguimiento del ticket'];
+
+    // Patron: "ticket" solo o "tickets" -> mostrar tickets activos
+    if (textoLower === 'ticket' || textoLower === 'tickets' || textoLower === 'mis tickets') {
+        return { handled: false }; // Dejar que IA muestre los tickets o comando /mis-tickets
+    }
 
     // Patron: detectar referencia a ticket + comentario directo
     // Ejemplos: "ticket #5 comentario", "el 5 sigue roto", "agrega al ticket 3 que..."

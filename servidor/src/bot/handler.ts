@@ -98,17 +98,33 @@ export const handleIncomingMessage = async (msg: any) => {
 
             if (confirma) {
                 const datos = pendienteConfirmacion.datos;
+                let mensajeHistorial = 'Accion confirmada.';
+                
                 try {
                     await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
+                    // Generar mensaje específico según la acción
+                    if (datos.accion === 'CREAR_TICKET') {
+                        mensajeHistorial = `Ticket #${datos.ticketData?.id || ''} creado exitosamente.`;
+                    } else if (datos.accion === 'AGREGAR_COMENTARIO') {
+                        mensajeHistorial = `Comentario agregado al ticket #${datos.ticketData?.id || ''}.`;
+                    } else if (datos.accion === 'CERRAR_TICKET') {
+                        mensajeHistorial = `Ticket #${datos.ticketData?.id || ''} cerrado exitosamente.`;
+                    }
                 } finally {
+                    // Limpiar COMPLETAMENTE el contexto después de ejecutar
                     const historialDespues = user.context?.historialConversacion || [];
                     const nuevoHistorial = [
                         ...historialDespues,
                         { role: 'user', content: msg.body },
-                        { role: 'assistant', content: 'Accion confirmada y ejecutada.' }
+                        { role: 'assistant', content: mensajeHistorial }
                     ].slice(-10);
 
-                    user.context = { ...(user.context || {}), pendienteConfirmacion: null, historialConversacion: nuevoHistorial };
+                    user.context = { 
+                        ...(user.context || {}), 
+                        pendienteConfirmacion: null,
+                        historialConversacion: nuevoHistorial,
+                        procesando: false  // Asegurar que se limpia
+                    };
                     user.changed('context', true);
                     await user.save();
                 }
