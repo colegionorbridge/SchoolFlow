@@ -40,7 +40,7 @@ export default function App() {
     verifyToken();
   }, []);
 
-  // Configuramos los listeners del socket una sola vez
+  // Configuramos los listeners del socket y conectamos solo si está autenticado
   useEffect(() => {
     const onConnect = () => {
       console.log('✅ Conectado al servidor - ID:', socket.id);
@@ -53,16 +53,23 @@ export default function App() {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 
-    // Solo conectar si no está conectado
-    if (!socket.connected) {
+    // Solo conectar si está autenticado y no está conectado
+    if (isAuth && !socket.connected) {
+      console.log('🔌 Conectando socket...');
       socket.connect();
+    }
+
+    // Desconectar si no está autenticado
+    if (!isAuth && socket.connected) {
+      console.log('🔌 Desconectando socket (no autenticado)');
+      socket.disconnect();
     }
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
     };
-  }, []);
+  }, [isAuth]); // Se ejecuta cuando cambia el estado de autenticación
 
   // Creamos el router pasando el estado actual
   const router = useMemo(() => 

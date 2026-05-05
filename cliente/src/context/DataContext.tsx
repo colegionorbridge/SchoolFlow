@@ -114,7 +114,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    cargarDatosIniciales();
+    // Solo cargar datos si hay token (usuario autenticado)
+    const token = localStorage.getItem('token');
+    if (token) {
+      cargarDatosIniciales();
+    }
 
     // --- EVENTOS DE TICKETS ---
 
