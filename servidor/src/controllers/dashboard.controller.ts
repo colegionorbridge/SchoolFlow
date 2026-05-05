@@ -57,11 +57,77 @@ export const updateUsuario = async (req: Request, res: Response) => {
 
 export const getRoles = async (_req: Request, res: Response) => {
   try {
-    const roles = await Role.findAll();
+    const roles = await Role.findAll({
+      order: [['nombre', 'ASC']]
+    });
     res.json(roles);
   } catch (error) {
     console.error('❌ Error al obtener roles:', error);
     res.status(500).json({ error: 'Error al obtener roles' });
+  }
+};
+
+export const createRole = async (req: Request, res: Response) => {
+  try {
+    const { nombre, codigoAcceso } = req.body;
+
+    if (!nombre) {
+      return res.status(400).json({ error: 'Nombre requerido' });
+    }
+
+    const rol = await Role.create({
+      nombre,
+      codigoAcceso: codigoAcceso || null
+    });
+
+    res.status(201).json(rol);
+  } catch (error: any) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: 'Ya existe un rol con ese nombre' });
+    }
+    console.error('❌ Error al crear rol:', error);
+    res.status(500).json({ error: 'Error al crear rol' });
+  }
+};
+
+export const updateRole = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { nombre, codigoAcceso } = req.body;
+
+    const rol = await (Role as any).findByPk(id);
+    if (!rol) {
+      return res.status(404).json({ error: 'Rol no encontrado' });
+    }
+
+    if (nombre !== undefined) rol.nombre = nombre;
+    if (codigoAcceso !== undefined) rol.codigoAcceso = codigoAcceso || null;
+
+    await rol.save();
+    res.json(rol);
+  } catch (error: any) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: 'Ya existe un rol con ese nombre' });
+    }
+    console.error('❌ Error al actualizar rol:', error);
+    res.status(500).json({ error: 'Error al actualizar rol' });
+  }
+};
+
+export const deleteRole = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const rol = await (Role as any).findByPk(id);
+    if (!rol) {
+      return res.status(404).json({ error: 'Rol no encontrado' });
+    }
+
+    await rol.destroy();
+    res.json({ message: 'Rol eliminado correctamente' });
+  } catch (error) {
+    console.error('❌ Error al eliminar rol:', error);
+    res.status(500).json({ error: 'Error al eliminar rol' });
   }
 };
 

@@ -63,6 +63,9 @@ interface DataContextType {
   crearSector: (datos: any) => Promise<void>;
   actualizarSector: (id: number, datos: any) => Promise<void>;
   eliminarSector: (id: number) => Promise<void>;
+  crearRol: (datos: any) => Promise<void>;
+  actualizarRol: (id: number, datos: any) => Promise<void>;
+  eliminarRol: (id: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -198,6 +201,74 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const crearRol = async (datos: any) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/roles`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(datos)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al crear rol');
+      }
+      
+      await cargarRoles();
+    } catch (error) {
+      console.error("Error al crear rol:", error);
+      throw error;
+    }
+  };
+
+  const actualizarRol = async (id: number, datos: any) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/roles/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(datos)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al actualizar rol');
+      }
+      
+      await cargarRoles();
+    } catch (error) {
+      console.error("Error al actualizar rol:", error);
+      throw error;
+    }
+  };
+
+  const eliminarRol = async (id: number) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/roles/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al eliminar rol');
+      }
+      
+      await cargarRoles();
+    } catch (error) {
+      console.error("Error al eliminar rol:", error);
+      throw error;
+    }
+  };
+
   const cargarSectores = async () => {
     const token = localStorage.getItem('token');
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -308,7 +379,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       tickets, usuarios, roles, sectores, loading, 
       cargarDatosIniciales, actualizarUsuario, 
       cargarRoles, cargarSectores, 
-      crearSector, actualizarSector, eliminarSector 
+      crearSector, actualizarSector, eliminarSector,
+      crearRol, actualizarRol, eliminarRol
     }}>
       {/* 4. El componente Toaster debe estar aquí para renderizar las alertas */}
       <Toaster />

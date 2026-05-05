@@ -5,6 +5,9 @@ import {
   updateTicket,
   updateUsuario,
   getRoles,
+  createRole,
+  updateRole,
+  deleteRole,
   getSectores,
   createSector,
   updateSector,
@@ -23,6 +26,9 @@ router.patch('/usuarios/:telefono', updateUsuario);
 
 // Roles
 router.get('/roles', getRoles);
+router.post('/roles', createRole);
+router.patch('/roles/:id', updateRole);
+router.delete('/roles/:id', deleteRole);
 
 // Sectores
 router.get('/sectores', getSectores);

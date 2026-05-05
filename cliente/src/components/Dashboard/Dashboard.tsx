@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import TicketModal from '../TicketModal/TicketModal';
 import EditUserModal from './EditUserModal';
 import SectoresPanel from './SectoresPanel';
+import RolesPanel from './RolesPanel';
 import styles from './Dashboard.module.css';
 
 const ORDEN_ESTADO = { 'abierto': 1, 'en_proceso': 2, 'cerrado': 3 };
@@ -26,14 +27,39 @@ const Dashboard: React.FC = () => {
   // ESTADO PARA MOSTRAR PANEL DE USUARIOS
   const [showUsersPanel, setShowUsersPanel] = useState(false);
   
-  // ESTADO PARA MOSTRAR PANEL DE SECToRES
+  // ESTADO PARA MOSTRAR PANEL DE SECTORES
   const [showSectoresPanel, setShowSectoresPanel] = useState(false);
+
+  // ESTADO PARA MOSTRAR PANEL DE ROLES
+  const [showRolesPanel, setShowRolesPanel] = useState(false);
 
   useEffect(() => {
     cargarDatosIniciales();
     cargarRoles();
     cargarSectores();
   }, []);
+
+  // Función para mostrar solo un panel a la vez
+  const handleShowUsers = () => {
+    setShowUsersPanel(true);
+    setShowSectoresPanel(false);
+    setShowRolesPanel(false);
+  };
+
+  const handleShowSectores = () => {
+    setShowSectoresPanel(true);
+    setShowUsersPanel(false);
+    setShowRolesPanel(false);
+  };
+
+  const handleShowRoles = () => {
+    setShowRolesPanel(true);
+    setShowUsersPanel(false);
+    setShowSectoresPanel(false);
+  };
+
+  // Mostrar tickets cuando no hay ningún panel abierto
+  const showTickets = !showUsersPanel && !showSectoresPanel && !showRolesPanel;
 
   // Función para actualizar el ticket en el servidor
   const handleUpdateTicket = async (id: number, updates: any) => {
@@ -140,8 +166,7 @@ const Dashboard: React.FC = () => {
           </div>
           <button 
             onClick={() => {
-              setShowUsersPanel(!showUsersPanel);
-              setShowSectoresPanel(false);
+              handleShowUsers();
             }}
             className={`${styles.navButton} ${showUsersPanel ? styles.activeNavButton : ''}`}
           >
@@ -149,12 +174,19 @@ const Dashboard: React.FC = () => {
           </button>
           <button 
             onClick={() => {
-              setShowSectoresPanel(!showSectoresPanel);
-              setShowUsersPanel(false);
+              handleShowSectores();
             }}
             className={`${styles.navButton} ${showSectoresPanel ? styles.activeNavButton : ''}`}
           >
             Sectores
+          </button>
+          <button 
+            onClick={() => {
+              handleShowRoles();
+            }}
+            className={`${styles.navButton} ${showRolesPanel ? styles.activeNavButton : ''}`}
+          >
+            Roles
           </button>
           <button 
             onClick={() => {
@@ -167,79 +199,6 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       </header>
-
-      <section className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <h3>Tickets Abiertos</h3>
-          <p className={styles.statNumber}>
-            {tickets.filter(t => t.estado === 'abierto').length}
-          </p>
-        </div>
-        <div className={styles.statCard}>
-          <h3>Usuarios Registrados</h3>
-          <p className={styles.statNumber}>{usuarios.length}</p>
-        </div>
-      </section>
-
-      <section className={styles.tableSection}>
-        <h2>Tickets Recientes</h2>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th onClick={() => requestSort('id')} className={styles.sortableHeader}>
-                ID {getSortIcon('id')}
-              </th>
-              <th onClick={() => requestSort('solicitante')} className={styles.sortableHeader}>
-                Solicitante {getSortIcon('solicitante')}
-              </th>
-              <th>Asunto / Descripción</th>
-              <th>Ubicación</th>
-              <th onClick={() => requestSort('prioridad')} className={styles.sortableHeader}>
-                Prioridad {getSortIcon('prioridad')}
-              </th>
-              <th onClick={() => requestSort('estado')} className={styles.sortableHeader}>
-                Estado {getSortIcon('estado')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedTickets.map((ticket) => (
-              <tr 
-                key={ticket.id} 
-                className={`${styles.row} ${styles.rowClickable}`}
-                onClick={() => setSelectedTicket(ticket)}
-              >
-                <td># {ticket.id}</td>
-                <td>
-                  <strong>{ticket.autor?.nombreCompleto || 'Desconocido'}</strong><br />
-                  <small>{ticket.userTelefono}</small>
-                </td>
-                <td>
-                  <strong>{ticket.asunto}</strong>
-                  <span className={styles.description}>{ticket.descripcion}</span>
-                </td>
-                <td>{ticket.ubicacion}</td>
-                <td>
-                  <span 
-                    className={styles.badge} 
-                    style={getPrioridadStyle(ticket.prioridad)}
-                  >
-                    {ticket.prioridad}
-                  </span>
-                </td>
-                <td>
-                  <span className={styles.statusText} style={{
-                    color: ticket.estado === 'abierto' ? '#d97706' : 
-                           ticket.estado === 'en_proceso' ? '#2563eb' : '#059669'
-                  }}>
-                    ● {ticket.estado.replace('_', ' ').toUpperCase()}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
 
       {/* PANEL DE USUARIOS */}
       {showUsersPanel && (
@@ -288,7 +247,86 @@ const Dashboard: React.FC = () => {
       {/* PANEL DE SECTORES */}
       {showSectoresPanel && <SectoresPanel />}
 
-      {/* RENDER DEL MODAL SI HAY TICKET SELECCIONADO */}
+      {/* PANEL DE ROLES */}
+      {showRolesPanel && <RolesPanel />}
+
+      {/* SECCIÓN DE TICKETS - Solo se muestra cuando no hay paneles abiertos */}
+      {showTickets && (
+        <>
+          <section className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <h3>Tickets Abiertos</h3>
+              <p className={styles.statNumber}>
+                {tickets.filter(t => t.estado === 'abierto').length}
+              </p>
+            </div>
+            <div className={styles.statCard}>
+              <h3>Usuarios Registrados</h3>
+              <p className={styles.statNumber}>{usuarios.length}</p>
+            </div>
+          </section>
+
+          <section className={styles.tableSection}>
+            <h2>Tickets Recientes</h2>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th onClick={() => requestSort('id')} className={styles.sortableHeader}>
+                    ID {getSortIcon('id')}
+                  </th>
+                  <th onClick={() => requestSort('solicitante')} className={styles.sortableHeader}>
+                    Solicitante {getSortIcon('solicitante')}
+                  </th>
+                  <th>Asunto / Descripción</th>
+                  <th>Ubicación</th>
+                  <th onClick={() => requestSort('prioridad')} className={styles.sortableHeader}>
+                    Prioridad {getSortIcon('prioridad')}
+                  </th>
+                  <th onClick={() => requestSort('estado')} className={styles.sortableHeader}>
+                    Estado {getSortIcon('estado')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedTickets.map((ticket) => (
+                  <tr 
+                    key={ticket.id} 
+                    className={`${styles.row} ${styles.rowClickable}`}
+                    onClick={() => setSelectedTicket(ticket)}
+                  >
+                    <td># {ticket.id}</td>
+                    <td>
+                      <strong>{ticket.autor?.nombreCompleto || 'Desconocido'}</strong><br />
+                      <small>{ticket.userTelefono}</small>
+                    </td>
+                    <td>
+                      <strong>{ticket.asunto}</strong>
+                      <span className={styles.description}>{ticket.descripcion}</span>
+                    </td>
+                    <td>{ticket.ubicacion}</td>
+                    <td>
+                      <span 
+                        className={styles.badge} 
+                        style={getPrioridadStyle(ticket.prioridad)}
+                      >
+                        {ticket.prioridad}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={styles.statusText} style={{
+                        color: ticket.estado === 'abierto' ? '#d97706' : 
+                               ticket.estado === 'en_proceso' ? '#2563eb' : '#059669'
+                      }}>
+                        ● {ticket.estado.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </>
+      )}
       {selectedTicket && (
         <TicketModal 
           ticket={selectedTicket} 
