@@ -5,7 +5,10 @@ const URL = import.meta.env.VITE_API_URL;
 
 export const socket = io(URL, {
   autoConnect: true,
-  // IMPORTANTE: Forzamos 'websocket' porque el modo 'polling' suele fallar 
-  // con los túneles de Cloudflare por temas de cookies y headers.
-  transports: ['websocket'],
+  // Usamos ambos transports para mayor compatibilidad
+  transports: ['polling', 'websocket'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 20000,
 });

@@ -8,9 +8,10 @@ const app: Application = express();
 
 // 1. Configuración de CORS restrictiva
 const frontendUrl = process.env.FRONTEND_URL || 'https://school-flow-inky.vercel.app';
+const apiUrl = 'https://api.alejndrogcandia.online';
 
 app.use(cors({
-  origin: [frontendUrl, 'http://localhost:5173'], // Permitir Vercel y desarrollo local
+  origin: [frontendUrl, 'http://localhost:5173', apiUrl], // Permitir Vercel, API y desarrollo local
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
