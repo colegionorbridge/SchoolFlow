@@ -13,8 +13,8 @@ export const initSocket = (httpServer: HttpServer) => {
             origin: [frontendUrl, 'http://localhost:5173', apiUrl],
             methods: ["GET", "POST"]
         },
-        transports: ['websocket'],
-        allowUpgrades: false
+      transports: ['websocket', 'polling'],
+        allowUpgrades: true
     });
 
     io.on('connection', (socket) => {
