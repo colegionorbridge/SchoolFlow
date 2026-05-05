@@ -61,6 +61,13 @@ const Dashboard: React.FC = () => {
   // Mostrar tickets cuando no hay ningún panel abierto
   const showTickets = !showUsersPanel && !showSectoresPanel && !showRolesPanel;
 
+  // Función para mostrar solo tickets
+  const handleShowTickets = () => {
+    setShowUsersPanel(false);
+    setShowSectoresPanel(false);
+    setShowRolesPanel(false);
+  };
+
   // Función para actualizar el ticket en el servidor
   const handleUpdateTicket = async (id: number, updates: any) => {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -164,6 +171,12 @@ const Dashboard: React.FC = () => {
           <div className={styles.statusBadge}>
             <span className={styles.onlineDot}></span> Servidor: Online
           </div>
+          <button 
+            onClick={() => handleShowTickets()}
+            className={`${styles.navButton} ${showTickets ? styles.activeNavButton : ''}`}
+          >
+            Tickets
+          </button>
           <button 
             onClick={() => {
               handleShowUsers();
