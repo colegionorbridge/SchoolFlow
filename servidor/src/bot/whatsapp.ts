@@ -7,7 +7,7 @@ const client = new Client({
     authStrategy: new LocalAuth({
         // No le pases la ruta completa aquí si ya la manejas en Docker.
         // Deja que use la carpeta por defecto 'session'
-        clientId: "session" 
+        clientId: "bot-norbridge" 
     }),
     puppeteer: {
         headless: true,
