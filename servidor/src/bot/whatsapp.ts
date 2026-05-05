@@ -9,9 +9,10 @@ const client = new Client({
         // Deja que use la carpeta por defecto 'session'
         clientId: "bot-norbridge" 
     }),
-    puppeteer: {
+  puppeteer: {
         headless: true,
-        // dumpio: true, // 👈 Cámbialo a TRUE temporalmente para ver el error real de Chrome en los logs
+        dumpio: true, // 👈 IMPORTANTE: Activá esto para ver errores ocultos de Chrome
+        executablePath: '/usr/bin/google-chrome', // 👈 Ajustá esta ruta si usas chromium-browser
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -19,8 +20,8 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', // 👈 Ayuda mucho a reducir el uso de CPU en Docker
-            '--disable-gpu'
+            '--disable-gpu',
+            // '--single-process', 👈 ELIMINADO: Causa tildes en versiones nuevas
         ],
     }
 });
