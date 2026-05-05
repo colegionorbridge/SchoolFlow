@@ -42,17 +42,25 @@ export default function App() {
 
   // Configuramos los listeners del socket una sola vez
   useEffect(() => {
-    socket.on('connect', () => {
+    const onConnect = () => {
       console.log('✅ Conectado al servidor - ID:', socket.id);
-    });
+    };
 
-    socket.on('disconnect', (reason) => {
+    const onDisconnect = (reason: string) => {
       console.log('❌ Desconectado - Razón:', reason);
-    });
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    // Solo conectar si no está conectado
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
     };
   }, []);
 
