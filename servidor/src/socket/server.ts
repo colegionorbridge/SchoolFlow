@@ -4,10 +4,12 @@ import type { Server as HttpServer } from 'http';
 // Exportamos la variable para usarla en los Services (ej: al crear un Ticket)
 export let io: SocketServer;
 
+const frontendUrl = process.env.FRONTEND_URL || 'https://school-flow-inky.vercel.app';
+
 export const initSocket = (httpServer: HttpServer) => {
     io = new SocketServer(httpServer, {
         cors: {
-            origin: "*", // Luego lo restringís a la URL de tu panel
+            origin: [frontendUrl, 'http://localhost:5173'],
             methods: ["GET", "POST"]
         }
     });

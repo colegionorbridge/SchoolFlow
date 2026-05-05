@@ -18,6 +18,9 @@ interface RespuestaIA {
     };
 }
 
+// Tiempo máximo de bloqueo "procesando" (2 minutos)
+const TIMEOUT_PROCESANDO = 2 * 60 * 1000;
+
 export const handleIncomingMessage = async (msg: any) => {
     // Tipamos como 'any' para facilitar el uso de modelos de Sequelize, 
     // pero lo inicializamos fuera del try.
@@ -39,8 +42,20 @@ export const handleIncomingMessage = async (msg: any) => {
             return;
         }
 
-        // Bloqueo de seguridad con chequeo opcional
-        if (user.context?.procesando) return;
+        // Bloqueo de seguridad con timeout automático
+        if (user.context?.procesando) {
+            const ultimaActualizacion = user.updatedAt ? new Date(user.updatedAt).getTime() : 0;
+            const ahora = Date.now();
+            if (ahora - ultimaActualizacion > TIMEOUT_PROCESANDO) {
+                // Timeout: limpiar flag automáticamente
+                user.context = { ...(user.context || {}), procesando: false };
+                user.changed('context', true);
+                await user.save();
+                console.log(`⏱️ [Timeout] Liberando flag procesando para ${telefono}`);
+            } else {
+                return; // Sigue procesando, ignorar
+            }
+        }
 
         // Actualizamos estado "procesando"
         user.context = { ...(user.context || {}), procesando: true };
@@ -49,54 +64,9 @@ export const handleIncomingMessage = async (msg: any) => {
         
         if (io) io.emit('usuario-actualizado', user);
 
-        const chat = await msg.getChat();
-
-        // 2. SISTEMA DE COMMANDS DIRECTOS (SIN IA)
-        // Primero intentamos resolver como commando/flow directo para ahorrar tokens
-        const commandResult = await processCommand(msg, user);
-        if (commandResult.handled) {
-            // Limpia el flag de procesando antes de responder
-            user.context = { ...(user.context || {}), procesando: false };
-            user.changed('context', true);
-            await user.save();
-            if (io) {
-                const userFinal = await User.findByPk(user.telefono, {
-                    include: [{ model: Role, as: 'rol' }]
-                });
-                if (userFinal) io.emit('usuario-actualizado', userFinal);
-            }
-            // Solo enviamos reply si existe (ejecutarAccion ya envio su propio mensaje)
-            if (commandResult.reply) {
-                await msg.reply(commandResult.reply);
-            }
-            return;
-        }
-
-        // 3. Si no es un comando, usamos IA
-        const mensajesPrevios = await chat.fetchMessages({ limit: 10 });
-
-        const historialParaIA = mensajesPrevios
-            .filter((m: any) => m.body && m.body.trim() !== "")
-            .map((m: any) => ({
-                role: m.fromMe ? 'model' as const : 'user' as const,
-                parts: [{ text: m.body }]
-            }));
-
-        const resultadoIA = await consultarGroq(msg.body, historialParaIA, user) as RespuestaIA;
-
-        // Si la respuesta de la IA NO tiene una accion que requiera confirmacion, respondemos normal
-        const { accion, ticketData } = resultadoIA;
-
-        if (accion === 'NINGUNA' || !accion) {
-            // Solo respondemos, no hay accion pendiente
-            await msg.reply(resultadoIA.respuesta);
-            return;
-        }
-
-        // Si YA hay una confirmacion pendiente del usuario (fallback conversacional)
+        // 2. Verificar si hay confirmacion pendiente y el usuario responde
         const pendienteConfirmacion = user.context?.pendienteConfirmacion;
-        if (pendienteConfirmacion && accion === pendienteConfirmacion.accionOriginal) {
-            // Verificamos si el mensaje del usuario indica confirmacion
+        if (pendienteConfirmacion) {
             const msgLower = msg.body.toLowerCase();
             const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
             const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
@@ -126,7 +96,50 @@ export const handleIncomingMessage = async (msg: any) => {
             return;
         }
 
-        // Si la IA quiere ejecutar una accion pero no hay confirmacion previa, guardamos en contexto y pedimos confirmacion
+        // 3. SISTEMA DE COMMANDS DIRECTOS (SIN IA)
+        // Primero intentamos resolver como commando/flow directo para ahorrar tokens
+        const commandResult = await processCommand(msg, user);
+        if (commandResult.handled) {
+            // Limpia el flag de procesando antes de responder
+            user.context = { ...(user.context || {}), procesando: false };
+            user.changed('context', true);
+            await user.save();
+            if (io) {
+                const userFinal = await User.findByPk(user.telefono, {
+                    include: [{ model: Role, as: 'rol' }]
+                });
+                if (userFinal) io.emit('usuario-actualizado', userFinal);
+            }
+            // Solo enviamos reply si existe (ejecutarAccion ya envio su propio mensaje)
+            if (commandResult.reply) {
+                await msg.reply(commandResult.reply);
+            }
+            return;
+        }
+
+        // 4. Si no es un comando, usamos IA
+        const chat = await msg.getChat();
+        const mensajesPrevios = await chat.fetchMessages({ limit: 10 });
+
+        const historialParaIA = mensajesPrevios
+            .filter((m: any) => m.body && m.body.trim() !== "")
+            .map((m: any) => ({
+                role: m.fromMe ? 'model' as const : 'user' as const,
+                parts: [{ text: m.body }]
+            }));
+
+        const resultadoIA = await consultarGroq(msg.body, historialParaIA, user) as RespuestaIA;
+
+        // Si la respuesta de la IA NO tiene una accion que requiera confirmacion, respondemos normal
+        const { accion, ticketData } = resultadoIA;
+
+        if (accion === 'NINGUNA' || !accion) {
+            // Solo respondemos, no hay accion pendiente
+            await msg.reply(resultadoIA.respuesta);
+            return;
+        }
+
+        // Si la IA quiere ejecutar una accion, guardamos en contexto y pedimos confirmacion
         if (accion === 'CREAR_TICKET' || accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') {
             console.log('📋 [Confirmacion] Guardando pendiente:', accion, '| ticketData:', JSON.stringify(ticketData));
             user.context = {
@@ -165,7 +178,6 @@ export const handleIncomingMessage = async (msg: any) => {
     } catch (error) {
         console.error('❌ Error:', error);
     } finally {
-        // 3. ERROR SOLUCIONADO EN FINALLY:
         // Chequeamos que 'user' no sea null antes de operar
         if (user) {
             try {

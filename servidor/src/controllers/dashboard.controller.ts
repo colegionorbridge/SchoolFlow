@@ -1,8 +1,147 @@
 import { type Request, type Response } from 'express';
-import { Ticket, User, Role, Sector } from '../models/models.js';
+import { Ticket, User, Role, Sector, sequelize } from '../models/models.js';
 import { io } from '../socket/server.js'
 // Importamos la instancia de client desde tu archivo bot/whatsapp.js
 import { client } from '../bot/whatsapp.js';
+
+// ==================== GESTIÓN DE USUARIOS ====================
+
+export const updateUsuario = async (req: Request, res: Response) => {
+  try {
+    const telefono = req.params.telefono as string;
+    const { nombreCompleto, email, roleId, sectores } = req.body;
+
+    const usuario = await (User as any).findByPk(telefono);
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Actualizar campos básicos
+    if (nombreCompleto !== undefined) usuario.nombreCompleto = nombreCompleto;
+    if (email !== undefined) usuario.email = email;
+
+    // Actualizar rol si se proporciona
+    if (roleId !== undefined) {
+      const rol = await (Role as any).findByPk(roleId);
+      if (!rol) {
+        return res.status(404).json({ error: 'Rol no encontrado' });
+      }
+      usuario.roleId = roleId;
+    }
+
+    await usuario.save();
+
+    // Actualizar sectores si se proporciona
+    if (sectores !== undefined && Array.isArray(sectores)) {
+      await (usuario as any).setSectores(sectores);
+    }
+
+    // Obtener usuario actualizado con relaciones
+    const usuarioActualizado = await User.findByPk(telefono, {
+      include: [
+        { model: Role, as: 'rol', attributes: ['id', 'nombre'] },
+        { model: Sector, as: 'sectores', through: { attributes: [] } }
+      ]
+    });
+
+    if (io) io.emit('usuario-actualizado', usuarioActualizado);
+
+    res.json(usuarioActualizado);
+  } catch (error) {
+    console.error('❌ Error al actualizar usuario:', error);
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+};
+
+// ==================== GESTIÓN DE ROLES ====================
+
+export const getRoles = async (_req: Request, res: Response) => {
+  try {
+    const roles = await Role.findAll();
+    res.json(roles);
+  } catch (error) {
+    console.error('❌ Error al obtener roles:', error);
+    res.status(500).json({ error: 'Error al obtener roles' });
+  }
+};
+
+// ==================== GESTIÓN DE SECTORES ====================
+
+export const getSectores = async (_req: Request, res: Response) => {
+  try {
+    const sectores = await Sector.findAll({
+      order: [['nombre', 'ASC']]
+    });
+    res.json(sectores);
+  } catch (error) {
+    console.error('❌ Error al obtener sectores:', error);
+    res.status(500).json({ error: 'Error al obtener sectores' });
+  }
+};
+
+export const createSector = async (req: Request, res: Response) => {
+  try {
+    const { nombre, codigoAcceso } = req.body;
+
+    if (!nombre) {
+      return res.status(400).json({ error: 'Nombre requerido' });
+    }
+
+    const sector = await Sector.create({
+      nombre,
+      codigoAcceso: codigoAcceso || null
+    });
+
+    res.status(201).json(sector);
+  } catch (error: any) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: 'Ya existe un sector con ese nombre' });
+    }
+    console.error('❌ Error al crear sector:', error);
+    res.status(500).json({ error: 'Error al crear sector' });
+  }
+};
+
+export const updateSector = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { nombre, codigoAcceso } = req.body;
+
+    const sector = await (Sector as any).findByPk(id);
+    if (!sector) {
+      return res.status(404).json({ error: 'Sector no encontrado' });
+    }
+
+    if (nombre !== undefined) sector.nombre = nombre;
+    if (codigoAcceso !== undefined) sector.codigoAcceso = codigoAcceso || null;
+
+    await sector.save();
+    res.json(sector);
+  } catch (error: any) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: 'Ya existe un sector con ese nombre' });
+    }
+    console.error('❌ Error al actualizar sector:', error);
+    res.status(500).json({ error: 'Error al actualizar sector' });
+  }
+};
+
+export const deleteSector = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const sector = await (Sector as any).findByPk(id);
+    if (!sector) {
+      return res.status(404).json({ error: 'Sector no encontrado' });
+    }
+
+    await sector.destroy();
+    res.json({ message: 'Sector eliminado correctamente' });
+  } catch (error) {
+    console.error('❌ Error al eliminar sector:', error);
+    res.status(500).json({ error: 'Error al eliminar sector' });
+  }
+};
 export const getTickets = async (_req: Request, res: Response) => {
   try {
     const tickets = await Ticket.findAll({
@@ -40,11 +179,11 @@ export const getUsuarios = async (_req: Request, res: Response) => {
 
 export const updateTicket = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { estado, prioridad, nuevaNota } = req.body;
-        const ticketId = parseInt(id as string, 10);
+        const ticketId = parseInt(id, 10);
 
-        const ticket = await Ticket.findByPk(ticketId);
+        const ticket = await (Ticket as any).findByPk(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket no encontrado' });
 
         // Guardamos el estado anterior para comparar cambios

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import styles from './Login.module.css';
 import { useData } from '../../context/DataContext';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface LoginProps {
   onLogin: () => void;
 }
@@ -9,24 +12,44 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const { cargarDatosIniciales } = useData();
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
-
-  // Forzamos una clave sencilla por ahora
-  const CLAVE_MAESTRA = "norbridge2026"; 
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === CLAVE_MAESTRA) {
-      setError(false);
-      await cargarDatosIniciales();
-      onLogin(); // Avisamos al componente padre que entramos
-    } else {
+    setLoading(true);
+    setError(false);
+
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        await cargarDatosIniciales();
+        onLogin();
+      } else {
+        setError(true);
+      }
+    } catch (err) {
       setError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <img 
+          src="https://colegionorbridge.edu.ar/wp-content/uploads/2026/02/Asset-1Logo-norbridge.png" 
+          alt="Colegio Norbridge" 
+          className={styles.logo}
+        />
         <h2 className={styles.title}>IT Dashboard</h2>
         <p className={styles.subtitle}>Colegio Norbridge</p>
         
@@ -37,9 +60,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             className={styles.input}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoFocus
           />
-          <button type="submit" className={styles.button}>
-            Entrar
+          <button type="submit" className={styles.button} disabled={loading}>
+            {loading ? 'Ingresando...' : 'Entrar'}
           </button>
         </form>
 

@@ -27,21 +27,42 @@ interface Usuario {
   email: string | null;
   esAdmin: boolean;
   registroCompleto: boolean;
+  roleId?: number | null;
   context?: {
     procesando?: boolean;
     [key: string]: any;
   };
   rol?: {
+    id: number;
     nombre: string;
   };
-  sectores?: Array<{ nombre: string }>;
+  sectores?: Array<{ id: number; nombre: string }>;
+}
+
+interface Rol {
+  id: number;
+  nombre: string;
+}
+
+interface Sector {
+  id: number;
+  nombre: string;
+  codigoAcceso: string | null;
 }
 
 interface DataContextType {
   tickets: Ticket[];
   usuarios: Usuario[];
+  roles: Rol[];
+  sectores: Sector[];
   loading: boolean;
   cargarDatosIniciales: () => Promise<void>;
+  actualizarUsuario: (telefono: string, datos: any) => Promise<void>;
+  cargarRoles: () => Promise<void>;
+  cargarSectores: () => Promise<void>;
+  crearSector: (datos: any) => Promise<void>;
+  actualizarSector: (id: number, datos: any) => Promise<void>;
+  eliminarSector: (id: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -58,13 +79,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const cargarDatosIniciales = async () => {
     setLoading(true);
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     try {
       const [resTickets, resUsuarios] = await Promise.all([
-        fetch(`${API_URL}/api/tickets`),
-        fetch(`${API_URL}/api/usuarios`)
+        fetch(`${API_URL}/api/tickets`, { headers }),
+        fetch(`${API_URL}/api/usuarios`, { headers })
       ]);
 
       if (!resTickets.ok || !resUsuarios.ok) {
+        if (resTickets.status === 401 || resUsuarios.status === 401) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
         throw new Error('Error en la respuesta del servidor');
       }
 
@@ -142,8 +175,137 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [notificationSound]); // Agregamos el audio como dependencia
 
+  const [roles, setRoles] = useState<Rol[]>([]);
+  const [sectores, setSectores] = useState<Sector[]>([]);
+
+  const cargarRoles = async () => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/roles`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setRoles(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar roles:", error);
+    }
+  };
+
+  const cargarSectores = async () => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/sectores`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setSectores(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar sectores:", error);
+    }
+  };
+
+  const actualizarUsuario = async (telefono: string, datos: any) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/usuarios/${telefono}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(datos)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al actualizar usuario');
+      }
+    } catch (error) {
+      console.error("Error al actualizar usuario:", error);
+      throw error;
+    }
+  };
+
+  const crearSector = async (datos: any) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/sectores`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(datos)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al crear sector');
+      }
+      
+      await cargarSectores();
+    } catch (error) {
+      console.error("Error al crear sector:", error);
+      throw error;
+    }
+  };
+
+  const actualizarSector = async (id: number, datos: any) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/sectores/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(datos)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al actualizar sector');
+      }
+      
+      await cargarSectores();
+    } catch (error) {
+      console.error("Error al actualizar sector:", error);
+      throw error;
+    }
+  };
+
+  const eliminarSector = async (id: number) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/sectores/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      
+      if (!res.ok) {
+        throw new Error('Error al eliminar sector');
+      }
+      
+      await cargarSectores();
+    } catch (error) {
+      console.error("Error al eliminar sector:", error);
+      throw error;
+    }
+  };
+
   return (
-    <DataContext.Provider value={{ tickets, usuarios, loading, cargarDatosIniciales }}>
+    <DataContext.Provider value={{ 
+      tickets, usuarios, roles, sectores, loading, 
+      cargarDatosIniciales, actualizarUsuario, 
+      cargarRoles, cargarSectores, 
+      crearSector, actualizarSector, eliminarSector 
+    }}>
       {/* 4. El componente Toaster debe estar aquí para renderizar las alertas */}
       <Toaster />
       {children}

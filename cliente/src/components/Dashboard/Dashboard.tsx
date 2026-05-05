@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
-import TicketModal from '../TicketModal/TicketModal'; // Asegurate de que la ruta sea correcta
+import TicketModal from '../TicketModal/TicketModal';
+import EditUserModal from './EditUserModal';
+import SectoresPanel from './SectoresPanel';
 import styles from './Dashboard.module.css';
 
 const ORDEN_ESTADO = { 'abierto': 1, 'en_proceso': 2, 'cerrado': 3 };
@@ -12,14 +14,25 @@ type SortConfig = {
 } | null;
 
 const Dashboard: React.FC = () => {
-  const { tickets, usuarios, loading, cargarDatosIniciales } = useData();
+  const { tickets, usuarios, loading, cargarDatosIniciales, cargarRoles, cargarSectores } = useData();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id', direction: 'desc' });
   
-  // ESTADO PARA EL MODAL
+  // ESTADO PARA EL MODAL DE TICKET
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+  
+  // ESTADO PARA EL MODAL DE EDICIÓN DE USUARIO
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  
+  // ESTADO PARA MOSTRAR PANEL DE USUARIOS
+  const [showUsersPanel, setShowUsersPanel] = useState(false);
+  
+  // ESTADO PARA MOSTRAR PANEL DE SECToRES
+  const [showSectoresPanel, setShowSectoresPanel] = useState(false);
 
   useEffect(() => {
     cargarDatosIniciales();
+    cargarRoles();
+    cargarSectores();
   }, []);
 
   // Función para actualizar el ticket en el servidor
@@ -114,8 +127,37 @@ const Dashboard: React.FC = () => {
           <h1 className={styles.title}>Panel de Gestión IT</h1>
           <p className={styles.subtitle}>Infraestructura y Soporte Norbridge</p>
         </div>
-        <div className={styles.statusBadge}>
-          <span className={styles.onlineDot}></span> Servidor: Online
+        <div className={styles.headerActions}>
+          <div className={styles.statusBadge}>
+            <span className={styles.onlineDot}></span> Servidor: Online
+          </div>
+          <button 
+            onClick={() => {
+              setShowUsersPanel(!showUsersPanel);
+              setShowSectoresPanel(false);
+            }}
+            className={`${styles.navButton} ${showUsersPanel ? styles.activeNavButton : ''}`}
+          >
+            Usuarios
+          </button>
+          <button 
+            onClick={() => {
+              setShowSectoresPanel(!showSectoresPanel);
+              setShowUsersPanel(false);
+            }}
+            className={`${styles.navButton} ${showSectoresPanel ? styles.activeNavButton : ''}`}
+          >
+            Sectores
+          </button>
+          <button 
+            onClick={() => {
+              localStorage.removeItem('token');
+              window.location.href = '/login';
+            }}
+            className={styles.logoutButton}
+          >
+            Cerrar Sesión
+          </button>
         </div>
       </header>
 
@@ -192,12 +234,67 @@ const Dashboard: React.FC = () => {
         </table>
       </section>
 
+      {/* PANEL DE USUARIOS */}
+      {showUsersPanel && (
+        <div className={styles.panelContainer}>
+          <div className={styles.panelHeader}>
+            <h2>Gestión de Usuarios</h2>
+            <button onClick={() => setShowUsersPanel(false)} className={styles.closePanelButton}>
+              ×
+            </button>
+          </div>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Teléfono</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usuarios.map(usuario => (
+                <tr key={usuario.telefono}>
+                  <td>{usuario.telefono}</td>
+                  <td>{usuario.nombreCompleto || 'Sin nombre'}</td>
+                  <td>{usuario.email || '-'}</td>
+                  <td>{usuario.rol?.nombre || 'Sin rol'}</td>
+                  <td>
+                    <button 
+                      onClick={() => {
+                        setEditingUser(usuario);
+                        setShowSectoresPanel(false);
+                      }}
+                      className={styles.editButton}
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* PANEL DE SECTORES */}
+      {showSectoresPanel && <SectoresPanel />}
+
       {/* RENDER DEL MODAL SI HAY TICKET SELECCIONADO */}
       {selectedTicket && (
         <TicketModal 
           ticket={selectedTicket} 
           onClose={() => setSelectedTicket(null)} 
           onUpdate={handleUpdateTicket}
+        />
+      )}
+
+      {/* MODAL DE EDICIÓN DE USUARIO */}
+      {editingUser && (
+        <EditUserModal 
+          user={editingUser} 
+          onClose={() => setEditingUser(null)} 
         />
       )}
     </div>

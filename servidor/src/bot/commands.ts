@@ -1,5 +1,6 @@
 import { User, Sector, Ticket, Role } from '../models/models.js';
 import { ejecutarAccion } from './actions.js';
+import { io } from '../socket/server.js';
 
 /**
  * SISTEMA DE COMMANDS DIRECTOS (SIN IA)
@@ -33,34 +34,52 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
     const texto = msg.body.trim();
     const textoLower = texto.toLowerCase();
 
-    // Confirmacion pendiente de una accion de IA (SI/NO)
-    const pendiente = user.context?.pendienteConfirmacion;
-    if (pendiente) {
-        console.log('📋 [Commands] Hay confirmacion pendiente:', JSON.stringify(pendiente));
+    // Confirmacion pendiente de una accion de IA (SI/NO) - Manejado en handler.ts
+    // Solo manejamos aquí si viene de commands (esperandoCierreConfirmacion)
+    const esperandoCierre = user.context?.esperandoCierreConfirmacion;
+    if (esperandoCierre) {
         const respuesta = texto.toLowerCase();
-        const confirmaciones = ['si', 'sí', 'confirmo', 'confirmar', 'dale', 'ok', 'dale que si'];
-        const cancelaciones = ['no', 'cancelo', 'cancelar', 'no quiero', 'dale que no'];
+        const confirmaciones = ['si', 'sí', 'confirmo', 'confirmar', 'dale', 'ok'];
+        const cancelaciones = ['no', 'cancelo', 'cancelar', 'no quiero'];
 
         if (confirmaciones.some(c => respuesta === c || respuesta.includes(c))) {
-            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+            user.context = { ...(user.context || {}), esperandoCierreConfirmacion: null };
             user.changed('context', true);
             await user.save();
 
             try {
-                console.log('🔧 [Confirmacion] Ejecutando accion:', pendiente.datos.accion, 'con datos:', JSON.stringify(pendiente.datos.ticketData));
-                await ejecutarAccion(msg, user, user.telefono, pendiente.datos.accion, pendiente.datos.ticketData);
+                const { ticketId } = esperandoCierre;
+                const ticket = await Ticket.findByPk(ticketId);
+                if (ticket && ticket.estado !== 'cerrado') {
+                    const historial = getHistorial(ticket);
+                    const notaCierre = {
+                        fecha: new Date().toLocaleString('es-AR'),
+                        autor: user.nombreCompleto || 'Usuario',
+                        nota: 'Ticket cerrado por el usuario.'
+                    };
+                    ticket.estado = 'cerrado';
+                    ticket.historial = [...historial, notaCierre];
+                    ticket.changed('historial', true);
+                    await ticket.save();
+
+                    const { io } = await import('../socket/server.js');
+                    const ticketActualizado = await Ticket.findByPk(ticket.id, {
+                        include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
+                    });
+                    if (io) io.emit('ticket-actualizado', ticketActualizado);
+                }
+                return { handled: true, reply: `✅ Ticket *#${ticketId}* cerrado correctamente.` };
             } catch (error) {
-                console.error('❌ [Confirmacion] Error ejecutando accion:', error);
-                await msg.reply('❌ Hubo un error al procesar tu solicitud. Intenta de nuevo.');
+                console.error('❌ [Confirmacion] Error:', error);
+                return { handled: true, reply: '❌ Hubo un error al cerrar el ticket.' };
             }
-            return { handled: true };
         }
 
         if (cancelaciones.some(c => respuesta === c || respuesta.includes(c))) {
-            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+            user.context = { ...(user.context || {}), esperandoCierreConfirmacion: null };
             user.changed('context', true);
             await user.save();
-            return { handled: true, reply: 'Entendido, se cancelo la accion.' };
+            return { handled: true, reply: 'OK, el ticket sigue abierto.' };
         }
     }
 
@@ -243,7 +262,6 @@ ${notasTexto}`
         await ticket.save();
 
         // Emitir por socket
-        const { io } = await import('../socket/server.js');
         const ticketActualizado = await Ticket.findByPk(ticket.id, {
             include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
         });
@@ -312,11 +330,12 @@ ${notasTexto}`
         ticket.changed('historial', true);
         await ticket.save();
 
-        const { io } = await import('../socket/server.js');
-        const ticketActualizado = await Ticket.findByPk(ticket.id, {
-            include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
-        });
-        if (io) io.emit('ticket-actualizado', ticketActualizado);
+        if (io) {
+            const ticketActualizado = await Ticket.findByPk(ticket.id, {
+                include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
+            });
+            io.emit('ticket-actualizado', ticketActualizado);
+        }
 
         return {
             handled: true,
@@ -358,42 +377,6 @@ ${notasTexto}`
             handled: true,
             reply: `¿Queres cerrar el ticket *#${ticketReciente.id}*: "${ticketReciente.asunto}"?\n\nRespondé *SI* para confirmar o *NO* para cancelar.`
         };
-    }
-
-    // Confirmacion de cierre: "SI" o "NO"
-    if (user.context?.esperandoCierreConfirmacion) {
-        const { ticketId } = user.context.esperandoCierreConfirmacion;
-        const respuesta = texto.toLowerCase();
-
-        // Limpiar contexto
-        user.context = { ...(user.context || {}), esperandoCierreConfirmacion: null };
-        user.changed('context', true);
-        await user.save();
-
-        if (respuesta === 'si' || respuesta === 'sí' || respuesta === 'confirmo' || respuesta === 'confirmar') {
-            const ticket = await Ticket.findByPk(ticketId);
-            if (ticket && ticket.estado !== 'cerrado') {
-                const historial = getHistorial(ticket);
-                const notaCierre = {
-                    fecha: new Date().toLocaleString('es-AR'),
-                    autor: user.nombreCompleto || 'Usuario',
-                    nota: 'Ticket cerrado por el usuario.'
-                };
-                ticket.estado = 'cerrado';
-                ticket.historial = [...historial, notaCierre];
-                ticket.changed('historial', true);
-                await ticket.save();
-
-                const { io } = await import('../socket/server.js');
-                const ticketActualizado = await Ticket.findByPk(ticket.id, {
-                    include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
-                });
-                if (io) io.emit('ticket-actualizado', ticketActualizado);
-            }
-            return { handled: true, reply: `✅ Ticket *#${ticketId}* cerrado correctamente.` };
-        } else {
-            return { handled: true, reply: 'OK, el ticket sigue abierto. Si necesitas algo más, avisanos.' };
-        }
     }
 
     // Ningun command coincidio -> dejar que la IA lo procese

@@ -6,6 +6,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare telefono: string;
   declare nombreCompleto: string | null;
   declare email: string | null;
+  declare roleId: number | null;
   
   declare activo: CreationOptional<boolean>;
   declare esAdmin: CreationOptional<boolean>;
@@ -20,7 +21,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare updatedAt: CreationOptional<Date>;
 }
 
-User.init({
+ User.init({
   telefono: {
     type: DataTypes.STRING,
     primaryKey: true,
@@ -32,9 +33,11 @@ User.init({
   email: {
     type: DataTypes.STRING,
     allowNull: true,
-    unique: true, 
-    // Quitamos el validate estricto aquí por si el registro es parcial, 
-    // lo validaremos manualmente en el registro técnico.
+    unique: true 
+  },
+  roleId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   },
   activo: {
     type: DataTypes.BOOLEAN,
@@ -50,15 +53,12 @@ User.init({
   },
   pasoRegistro: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
+    defaultValue:0,
   },
   context: {
-    // Al usar JSON, podés guardar { sectorId: 1, intento: 1, etc. }
     type: DataTypes.JSON, 
     allowNull: true,
   },
-  // No es necesario definir createdAt/updatedAt en el Init si timestamps es true,
-  // pero los dejamos si prefieres un control manual total.
   createdAt: {
     type: DataTypes.DATE,
   },
