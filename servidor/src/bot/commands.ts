@@ -101,11 +101,11 @@ Tambien podes:
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : t.estado === 'en_proceso' ? '🔵' : '🟢';
             return `${emoji} *#${t.id}* - ${t.asunto}
-   Estado: ${t.estado.replace('_', ' ')}
-   Prioridad: ${t.prioridad}
-   Ubicación: ${t.ubicacion}`;
+📊 Estado: ${t.estado.replace('_', ' ')}
+🔴 Prioridad: ${t.prioridad}
+📍 Ubicación: ${t.ubicacion}`;
         }).join('\n\n');
-
+        
         return {
             handled: true,
             reply: `📋 *Tus tickets recientes:*\n\n${lista}`
@@ -134,10 +134,10 @@ Tambien podes:
         return {
             handled: true,
             reply: `${emoji} *Ticket #${ticket.id}*\n\n` +
-                `📌 Asunto: ${ticket.asunto}\n` +
-                `📊 Estado: ${ticket.estado.replace('_', ' ').toUpperCase()}\n` +
-                `🔴 Prioridad: ${ticket.prioridad}\n` +
-                `📍 Ubicación: ${ticket.ubicacion}\n\n` +
+                `📌 *Asunto:* ${ticket.asunto}\n` +
+                `📊 *Estado:* ${ticket.estado.replace('_', ' ').toUpperCase()}\n` +
+                `🔴 *Prioridad:* ${ticket.prioridad}\n` +
+                `📍 *Ubicación:* ${ticket.ubicacion}\n\n` +
                 `${historial.length > 0 ? '📝 *Últimas notas:*\n' + historial.slice(-2).map((h: any) => `• ${h.fecha}: ${h.nota}`).join('\n') : 'Sin notas registradas.'}`
         };
     }
