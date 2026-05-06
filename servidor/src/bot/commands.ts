@@ -103,9 +103,13 @@ Tambien podes:
 
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : '🔵';
+            const fecha = new Date(t.createdAt).toLocaleString('es-AR');
+            const historial = getHistorial(t);
+            const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
             return `${emoji} *#${t.id}* - ${t.asunto}
 📍 ${t.ubicacion}
-🔴 ${t.prioridad}`;
+🕒 ${fecha}
+${comentarios}`;
         }).join('\n\n');
         
         return {
@@ -128,9 +132,13 @@ Tambien podes:
 
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : t.estado === 'en_proceso' ? '🔵' : '🟢';
+            const fecha = new Date(t.createdAt).toLocaleString('es-AR');
+            const historial = getHistorial(t);
+            const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
             return `${emoji} *#${t.id}* - ${t.asunto}
 📍 ${t.ubicacion}
-🔴 ${t.prioridad}`;
+🕒 ${fecha}
+${comentarios}`;
         }).join('\n\n');
 
         return {
