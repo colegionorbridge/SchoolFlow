@@ -86,29 +86,56 @@ Tambien podes:
         };
     }
 
-    // Comando: /mis-tickets
-    if (texto === '/mis-tickets' || texto === '/mistickets') {
+    // Comando: /tickets - Ver tickets activos (abiertos/en proceso)
+    if (texto === '/tickets' || texto === '/tickets-activos') {
         const tickets = await Ticket.findAll({
-            where: { userTelefono: user.telefono },
+            where: { 
+                userTelefono: user.telefono,
+                estado: ['abierto', 'en_proceso'] 
+            },
             order: [['createdAt', 'DESC']],
             limit: 10
         });
 
         if (tickets.length === 0) {
-            return { handled: true, reply: 'No tenes tickets registrados.' };
+            return { handled: true, reply: 'No tenés tickets activos.' };
+        }
+
+        const lista = tickets.map(t => {
+            const emoji = t.estado === 'abierto' ? '🟠' : '🔵';
+            return `${emoji} *#${t.id}* - ${t.asunto}
+📍 ${t.ubicacion}
+🔴 ${t.prioridad}`;
+        }).join('\n\n');
+        
+        return {
+            handled: true,
+            reply: `📋 *Tickets activos:*\n\n${lista}`
+        };
+    }
+
+    // Comando: /todos - Ver TODOS los tickets
+    if (texto === '/todos' || texto === '/todos-tickets') {
+        const tickets = await Ticket.findAll({
+            where: { userTelefono: user.telefono },
+            order: [['createdAt', 'DESC']],
+            limit: 20
+        });
+
+        if (tickets.length === 0) {
+            return { handled: true, reply: 'No tenés tickets registrados.' };
         }
 
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : t.estado === 'en_proceso' ? '🔵' : '🟢';
             return `${emoji} *#${t.id}* - ${t.asunto}
-📊 Estado: ${t.estado.replace('_', ' ')}
-🔴 Prioridad: ${t.prioridad}
-📍 Ubicación: ${t.ubicacion}`;
+📍 ${t.ubicacion}
+🔴 ${t.prioridad}`;
         }).join('\n\n');
-        
+
         return {
             handled: true,
-            reply: `📋 *Tus tickets recientes:*\n\n${lista}`
+            reply: `📋 *Todos tus tickets:*\n\n${lista}`
         };
     }
 
