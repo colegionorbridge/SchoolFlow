@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { User, Sector, Ticket, Role } from '../models/models.js';
 import { ejecutarAccion } from './actions.js';
 import { io } from '../socket/server.js';
@@ -71,13 +72,14 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
         return {
             handled: true,
             reply: `Comandos disponibles:
-
-/mis-tickets - Ver tus tickets activos
+ 
+/tickets - Ver tickets activos
+/todos - Ver todos los tickets (incluye cerrados)
 /estado [id] - Ver estado de un ticket (ej: /estado 5)
 /comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)
 /cerrar [id] - Cerrar un ticket (ej: /cerrar 3)
 /ayuda - Mostrar esta lista
-
+ 
 Tambien podes:
 - Reportar un problema nuevo escribiendolo normalmente
 - Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"
@@ -87,11 +89,11 @@ Tambien podes:
     }
 
     // Comando: /tickets - Ver tickets activos (abiertos/en proceso)
-    if (texto === '/tickets' || texto === '/tickets-activos') {
+    if (texto === '/tickets' || texto === '/tickets-activos' || texto === '/mis-tickets') {
         const tickets = await Ticket.findAll({
             where: { 
                 userTelefono: user.telefono,
-                estado: ['abierto', 'en_proceso'] 
+                estado: { [Op.in]: ['abierto', 'en_proceso'] }
             },
             order: [['createdAt', 'DESC']],
             limit: 10
@@ -297,7 +299,7 @@ ${notasTexto}`
 
     // Patron: "ticket" solo o "tickets" -> mostrar tickets activos
     if (textoLower === 'ticket' || textoLower === 'tickets' || textoLower === 'mis tickets') {
-        return { handled: false }; // Dejar que IA muestre los tickets o comando /mis-tickets
+        return { handled: false }; // Dejar que IA muestre los tickets
     }
 
     // Patron: detectar referencia a ticket + comentario directo

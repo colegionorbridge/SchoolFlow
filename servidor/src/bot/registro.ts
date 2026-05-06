@@ -139,7 +139,7 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
 
                 await msg.reply(`🎉 **¡Registro completado!**\n\nBienvenido/a, ${user.nombreCompleto}. Ya podés reportar incidencias.`);
             
-            await msg.reply(`📋 *Comandos disponibles:*\n\n/mis-tickets - Ver tus tickets activos\n/estado [id] - Ver estado de un ticket (ej: /estado 5)\n/comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)\n/cerrar [id] - Cerrar un ticket (ej: /cerrar 3)\n/ayuda - Mostrar esta lista\n\nTambién podés:\n- Reportar un problema nuevo escribiéndolo normalmente\n- Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"\n- Decir "ver comentarios del 5" para ver el historial\n- Decir "se arregló" o "ya funciona" para cerrar un ticket`);
+            await msg.reply(`📋 *Comandos disponibles:*\n\n/tickets - Ver tickets activos\n/todos - Ver todos los tickets (incluye cerrados)\n/estado [id] - Ver estado de un ticket (ej: /estado 5)\n/comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)\n/cerrar [id] - Cerrar un ticket (ej: /cerrar 3)\n/ayuda - Mostrar esta lista\n\nTambién podés:\n- Reportar un problema nuevo escribiéndolo normalmente\n- Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"\n- Decir "ver comentarios del 5" para ver el historial\n- Decir "se arregló" o "ya funciona" para cerrar un ticket`);
             }
             break;
 
@@ -187,7 +187,7 @@ if (io && userFinal) {
 
             await msg.reply(`✅ **Código de rol verificado.**\n\n🎉 **¡Registro completado!** Bienvenido/a al sistema, ${user.nombreCompleto}.`);
             
-            await msg.reply(`📋 *Comandos disponibles:*\n\n/mis-tickets - Ver tus tickets activos\n/estado [id] - Ver estado de un ticket (ej: /estado 5)\n/comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)\n/cerrar [id] - Cerrar un ticket (ej: /cerrar 3)\n/ayuda - Mostrar esta lista\n\nTambién podés:\n- Reportar un problema nuevo escribiéndolo normalmente\n- Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"\n- Decir "ver comentarios del 5" para ver el historial\n- Decir "se arregló" o "ya funciona" para cerrar un ticket`);
+            await msg.reply(`📋 *Comandos disponibles:*\n\n/tickets - Ver tickets activos\n/todos - Ver todos los tickets (incluye cerrados)\n/estado [id] - Ver estado de un ticket (ej: /estado 5)\n/comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)\n/cerrar [id] - Cerrar un ticket (ej: /cerrar 3)\n/ayuda - Mostrar esta lista\n\nTambién podés:\n- Reportar un problema nuevo escribiéndolo normalmente\n- Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"\n- Decir "ver comentarios del 5" para ver el historial\n- Decir "se arregló" o "ya funciona" para cerrar un ticket`);
             break;
 
         default:
