@@ -23,8 +23,8 @@ export const consultarGroq = async (mensajeUsuario: string, historial: any[], da
                 const fecha = new Date(t.createdAt).toLocaleString('es-AR');
                 const historial = t.historial ? (Array.isArray(t.historial) ? t.historial : JSON.parse(t.historial)) : [];
                 const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
-                return `#${t.id} - ${t.asunto} | 📍 ${t.ubicacion} | 🕒 ${fecha} | ${comentarios}`;
-            }).join('\n')
+                return `• Ticket #${t.id}\n  📌 Asunto: ${t.asunto}\n  📍 Ubicación: ${t.ubicacion}\n  🕒 Creado: ${fecha}\n  ${comentarios}`;
+            }).join('\n\n')
             : 'NO_POSEE_TICKETS_ACTIVOS';
 
         const esInicioChat = historial.length === 0;
@@ -67,6 +67,21 @@ REGLAS:
 - EMOJIS: Moderados (ðŸ“Œ, ðŸ“, ðŸ“, ðŸŸ , ðŸ”µ, âœ…)
 - SOLO soporte tecnico. No compartas datos del tecnico.
 - Cualquier solicitud de cambio/gestion DEBE generar ticket (CREAR_TICKET).
+
+COMANDOS DISPONIBLES PARA EL USUARIO:
+/mis-tickets - Ver tus tickets activos
+/estado [id] - Ver estado de un ticket (ej: /estado 5)
+/comentarios [id] - Ver todo el historial de un ticket (ej: /comentarios 5)
+/cerrar [id] - Cerrar un ticket (ej: /cerrar 3)
+/ayuda - Mostrar esta lista
+
+TambiÃ©n podÃ©s:
+- Reportar un problema nuevo escribiÃ©ndolo normalmente
+- Agregar un comentario escribiendo "ticket #[numero] [tu comentario]"
+- Decir "ver comentarios del 5" para ver el historial
+- Decir "se arreglÃ³" o "ya funciona" para cerrar un ticket
+
+SI EL USUARIO SOLICITA AYUDA O COMANDOS, PROPORCIONA ESTA LISTA.
 
 CORTESIA: Si dice "gracias", "dale", "perfecto": respondÃ© breve y usÃ¡ accion "NINGUNA".
 

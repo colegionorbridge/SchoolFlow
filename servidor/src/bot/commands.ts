@@ -106,10 +106,7 @@ Tambien podes:
             const fecha = new Date(t.createdAt).toLocaleString('es-AR');
             const historial = getHistorial(t);
             const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
-            return `${emoji} *#${t.id}* - ${t.asunto}
-📍 ${t.ubicacion}
-🕒 ${fecha}
-${comentarios}`;
+            return `${emoji} *Ticket #${t.id}*\n📌 *Asunto:* ${t.asunto}\n📍 *Ubicación:* ${t.ubicacion}\n🕒 *Creado:* ${fecha}\n${comentarios}`;
         }).join('\n\n');
         
         return {
@@ -135,10 +132,7 @@ ${comentarios}`;
             const fecha = new Date(t.createdAt).toLocaleString('es-AR');
             const historial = getHistorial(t);
             const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
-            return `${emoji} *#${t.id}* - ${t.asunto}
-📍 ${t.ubicacion}
-🕒 ${fecha}
-${comentarios}`;
+            return `${emoji} *Ticket #${t.id}*\n📌 *Asunto:* ${t.asunto}\n📍 *Ubicación:* ${t.ubicacion}\n🕒 *Creado:* ${fecha}\n${comentarios}`;
         }).join('\n\n');
 
         return {
