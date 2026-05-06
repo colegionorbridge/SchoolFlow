@@ -33,34 +33,27 @@ const getHistorial = (ticket: any): any[] => {
 export const processCommand = async (msg: any, user: any): Promise<CommandResult> => {
     const texto = msg.body.trim();
     const textoLower = texto.toLowerCase();
+    
+    // Patrón: "se arregló", "ya funciona" -> Cerrar ticket (manejo rápido sin comando)
+    const frasesCierreRapido = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado'];
+    if (frasesCierreRapido.some(frase => textoLower.includes(frase)) && user.context?.pendienteConfirmacion) {
+        // Si ya hay una confirmación pendiente, delegar a handler.ts
+        return { handled: false };
+    }
 
-    // Confirmacion pendiente de cierre (desde commands) - Usar mismo formato que IA
-    const esperandoCierre = user.context?.esperandoCierreConfirmacion;
-    if (esperandoCierre) {
+    // Confirmación pendiente de cierre (usar mismo sistema que handler.ts)
+    const pendiente = user.context?.pendienteConfirmacion;
+    if (pendiente && pendiente.datos?.accion === 'CERRAR_TICKET') {
         const respuesta = texto.toLowerCase();
         const confirmaciones = ['si', 'sí', 'confirmo', 'confirmar', 'dale', 'ok'];
         const cancelaciones = ['no', 'cancelo', 'cancelar', 'no quiero'];
-
+        
         if (confirmaciones.some(c => respuesta === c || respuesta.includes(c))) {
-            // Unificar con el sistema de pendienteConfirmacion de handler.ts
-            user.context = {
-                ...(user.context || {}),
-                esperandoCierreConfirmacion: null,
-                pendienteConfirmacion: {
-                    accionOriginal: 'CERRAR_TICKET',
-                    datos: {
-                        accion: 'CERRAR_TICKET',
-                        ticketData: { id: esperandoCierre.ticketId }
-                    }
-                }
-            };
-            user.changed('context', true);
-            await user.save();
-            return { handled: true, reply: `✅ Ticket *#${esperandoCierre.ticketId}* cerrado correctamente.` };
+            // La ejecución real la hace handler.ts, aquí solo limpiamos
+            return { handled: false }; // Dejar que handler.ts maneje
         }
-
         if (cancelaciones.some(c => respuesta === c || respuesta.includes(c))) {
-            user.context = { ...(user.context || {}), esperandoCierreConfirmacion: null };
+            user.context = { ...(user.context || {}), pendienteConfirmacion: null };
             user.changed('context', true);
             await user.save();
             return { handled: true, reply: 'OK, el ticket sigue abierto.' };
@@ -213,10 +206,19 @@ ${notasTexto}`
         };
     }
 
-    // Comando: /cerrar [id]
-    if (texto.startsWith('/cerrar ') || texto.startsWith('/cerrar#')) {
-        const idStr = texto.split(/[\s#]+/)[1];
-        const ticketId = parseInt(idStr, 10);
+    // Comando: /cerrar [id] o cerrar ticket [id] (con o sin /)
+    // Enfoque simple: si contiene "cerrar", extraer el número
+    let ticketId = 0;
+    if (texto.toLowerCase().includes('cerrar')) {
+        const numeros = texto.match(/\d+/g);
+        if (numeros && numeros.length > 0) {
+            // El último número debería ser el ID del ticket
+            ticketId = parseInt(numeros[numeros.length - 1], 10);
+            console.log(`🔍 [Cerrar] Texto: "${texto}" | Números encontrados: ${JSON.stringify(numeros)} | ID: ${ticketId}`);
+        }
+    }
+    
+    if (ticketId > 0) {
 
         if (isNaN(ticketId)) {
             return { handled: true, reply: 'Formato incorrecto. Usá: /cerrar [numero]' };
