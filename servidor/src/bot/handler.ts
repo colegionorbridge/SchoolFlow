@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { User, Role, Sector, Ticket } from '../models/models.js';
 import { consultarGroq } from './groq.js';
 import { manejarRegistro } from './registro.js';
@@ -8,7 +9,7 @@ import { io } from '../socket/server.js';
 // 1. Definimos la forma de la respuesta de la IA para que TS no proteste
 interface RespuestaIA {
     respuesta: string;
-    accion: 'CREAR_TICKET' | 'AGREGAR_COMENTARIO' | 'CERRAR_TICKET' | 'NINGUNA';
+    accion: 'CREAR_TICKET' | 'AGREGAR_COMENTARIO' | 'CERRAR_TICKET' | 'MOSTRAR_TICKETS' | 'NINGUNA';
     ticketData?: {
         id?: number;
         asunto?: string;
@@ -184,6 +185,44 @@ export const handleIncomingMessage = async (msg: any) => {
             await user.save();
 
             await msg.reply(resultadoIA.respuesta);
+            return;
+        }
+
+        // Accion: MOSTRAR_TICKETS - IA pidio mostrar tickets, consultamos DB directo
+        if (accion === 'MOSTRAR_TICKETS') {
+            const tickets = await Ticket.findAll({
+                where: { 
+                    userTelefono: user.telefono,
+                    estado: { [Op.in]: ['abierto', 'en_proceso'] }
+                },
+                order: [['createdAt', 'DESC']],
+                limit: 10
+            });
+
+            let reply = '';
+            if (tickets.length === 0) {
+                reply = 'No tenés tickets activos.';
+            } else {
+                const lista = tickets.map((t: any) => {
+                    const emoji = t.estado === 'abierto' ? '🟠' : '🔵';
+                    const fecha = new Date(t.createdAt).toLocaleString('es-AR');
+                    const historial = t.historial ? (Array.isArray(t.historial) ? t.historial : JSON.parse(t.historial)) : [];
+                    const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
+                    return `${emoji} *Ticket #${t.id}*\n📌 *Asunto:* ${t.asunto}\n📍 *Ubicación:* ${t.ubicacion}\n🕒 *Creado:* ${fecha}\n${comentarios}`;
+                }).join('\n\n');
+                reply = `📋 *Tickets activos:*\n\n${lista}`;
+            }
+
+            const nuevoHistorial = [
+                ...historialConversacion,
+                { role: 'user', content: msg.body },
+                { role: 'assistant', content: reply }
+            ].slice(-10);
+
+            user.context = { ...(user.context || {}), historialConversacion: nuevoHistorial };
+            user.changed('context', true);
+            await user.save();
+            await msg.reply(reply);
             return;
         }
 
