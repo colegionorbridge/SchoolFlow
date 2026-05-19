@@ -229,6 +229,7 @@ const Dashboard: React.FC = () => {
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Rol</th>
+                <th>Sector</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -239,6 +240,7 @@ const Dashboard: React.FC = () => {
                   <td>{usuario.nombreCompleto || 'Sin nombre'}</td>
                   <td>{usuario.email || '-'}</td>
                   <td>{usuario.rol?.nombre || 'Sin rol'}</td>
+                  <td>{usuario.sectores?.map(s => s.nombre).join(', ') || 'Sin sector'}</td>
                   <td>
                     <button 
                       onClick={() => {
