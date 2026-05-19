@@ -61,12 +61,6 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
         }
     }
 
-    // Detección de cortesía (gracias, perfecto, ok) - después de confirmaciones pendientes
-    const cortesias = ['gracias', 'muchas gracias', 'perfecto', 'genial', 'de nada'];
-    if (cortesias.some(c => textoLower === c || textoLower.includes(c))) {
-        return { handled: true, reply: '¡De nada! Si necesitás algo más, avisame 😊' };
-    }
-
     // Comando: /ayuda
     if (texto === '/ayuda' || texto === '/help') {
         return {
