@@ -6,6 +6,11 @@ import { processCommand } from './commands.js';
 import { ejecutarAccion } from './actions.js';
 import { io } from '../socket/server.js'; 
 
+// Escudo anti-duplicados: evita que reconexiones o re-emisiones
+// de whatsapp-web.js procesen el mismo mensaje dos veces.
+const mensajesProcesados = new Set<string>();
+const TTL_MENSAJE = 15_000; // 15 segundos
+
 // 1. Definimos la forma de la respuesta de la IA para que TS no proteste
 interface RespuestaIA {
     respuesta: string;
@@ -23,6 +28,17 @@ interface RespuestaIA {
 const TIMEOUT_PROCESANDO = 2 * 60 * 1000;
 
 export const handleIncomingMessage = async (msg: any) => {
+    // --- ESCUDO ANTI-DUPLICADOS ---
+    const msgId = msg.id?.id || msg.id?._serialized;
+    if (msgId) {
+        if (mensajesProcesados.has(msgId)) {
+            console.log(`🛡️ [Deduplicado] Mensaje ${msgId} ignorado (ya procesado).`);
+            return;
+        }
+        mensajesProcesados.add(msgId);
+        setTimeout(() => mensajesProcesados.delete(msgId), TTL_MENSAJE);
+    }
+
     // Tipamos como 'any' para facilitar el uso de modelos de Sequelize, 
     // pero lo inicializamos fuera del try.
     let user: any = null;
