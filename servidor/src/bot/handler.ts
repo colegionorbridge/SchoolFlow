@@ -26,6 +26,7 @@ interface RespuestaIA {
 
 // Tiempo máximo de bloqueo "procesando" (2 minutos)
 const TIMEOUT_PROCESANDO = 2 * 60 * 1000;
+const TIMEOUT_PENDIENTE = 30 * 60 * 1000; // 30 minutos
 
 export const handleIncomingMessage = async (msg: any) => {
     // --- ESCUDO ANTI-DUPLICADOS ---
@@ -92,65 +93,79 @@ export const handleIncomingMessage = async (msg: any) => {
         // 2. Verificar si hay confirmacion pendiente y el usuario responde
         const pendienteConfirmacion = user.context?.pendienteConfirmacion;
         if (pendienteConfirmacion) {
-            const msgLower = msg.body.toLowerCase();
-            const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
-            const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
-
-            // Obtener historial actual
-            const historialActual = user.context?.historialConversacion || [];
-
-            if (cancela) {
+            // Si expiró, limpiar automáticamente
+            if (pendienteConfirmacion.timestamp && Date.now() - pendienteConfirmacion.timestamp > TIMEOUT_PENDIENTE) {
+                const historialActual = user.context?.historialConversacion || [];
                 const nuevoHistorial = [
                     ...historialActual,
-                    { role: 'user', content: msg.body },
-                    { role: 'assistant', content: 'Entendido, se cancelo la accion.' }
+                    { role: 'assistant', content: 'Se canceló una acción pendiente por tiempo de espera.' }
                 ].slice(-10);
 
                 user.context = { ...(user.context || {}), pendienteConfirmacion: null, historialConversacion: nuevoHistorial };
                 user.changed('context', true);
                 await user.save();
-                await msg.reply('Entendido, se cancelo la accion.');
-                return;
-            }
+                console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
+            } else {
+                const msgLower = msg.body.toLowerCase();
+                const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
+                const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
 
-            if (confirma) {
-                const datos = pendienteConfirmacion.datos;
-                let mensajeHistorial = 'Accion confirmada.';
-                
-                try {
-                    await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
-                    // Generar mensaje específico según la acción
-                    if (datos.accion === 'CREAR_TICKET') {
-                        mensajeHistorial = `Ticket #${datos.ticketData?.id || ''} creado exitosamente.`;
-                    } else if (datos.accion === 'AGREGAR_COMENTARIO') {
-                        mensajeHistorial = `Comentario agregado al ticket #${datos.ticketData?.id || ''}.`;
-                    } else if (datos.accion === 'CERRAR_TICKET') {
-                        mensajeHistorial = `Ticket #${datos.ticketData?.id || ''} cerrado exitosamente.`;
-                    }
-                } finally {
-                    // Limpiar COMPLETAMENTE el contexto después de ejecutar
-                    const historialDespues = user.context?.historialConversacion || [];
+                // Obtener historial actual
+                const historialActual = user.context?.historialConversacion || [];
+
+                if (cancela) {
                     const nuevoHistorial = [
-                        ...historialDespues,
+                        ...historialActual,
                         { role: 'user', content: msg.body },
-                        { role: 'assistant', content: mensajeHistorial }
+                        { role: 'assistant', content: 'Entendido, se cancelo la accion.' }
                     ].slice(-10);
 
-                    user.context = { 
-                        ...(user.context || {}), 
-                        pendienteConfirmacion: null,
-                        historialConversacion: nuevoHistorial,
-                        procesando: false  // Asegurar que se limpia
-                    };
+                    user.context = { ...(user.context || {}), pendienteConfirmacion: null, historialConversacion: nuevoHistorial };
                     user.changed('context', true);
                     await user.save();
+                    await msg.reply('Entendido, se cancelo la accion.');
+                    return;
                 }
+
+                if (confirma) {
+                    const datos = pendienteConfirmacion.datos;
+                    let mensajeHistorial = 'Accion confirmada.';
+                    
+                    try {
+                        await ejecutarAccion(msg, user, telefono, datos.accion, datos.ticketData);
+                        // Generar mensaje específico según la acción
+                        if (datos.accion === 'CREAR_TICKET') {
+                            mensajeHistorial = `Ticket #${datos.ticketData?.id || ''} creado exitosamente.`;
+                        } else if (datos.accion === 'AGREGAR_COMENTARIO') {
+                            mensajeHistorial = `Comentario agregado al ticket #${datos.ticketData?.id || ''}.`;
+                        } else if (datos.accion === 'CERRAR_TICKET') {
+                            mensajeHistorial = `Ticket #${datos.ticketData?.id || ''} cerrado exitosamente.`;
+                        }
+                    } finally {
+                        // Limpiar COMPLETAMENTE el contexto después de ejecutar
+                        const historialDespues = user.context?.historialConversacion || [];
+                        const nuevoHistorial = [
+                            ...historialDespues,
+                            { role: 'user', content: msg.body },
+                            { role: 'assistant', content: mensajeHistorial }
+                        ].slice(-10);
+
+                        user.context = { 
+                            ...(user.context || {}), 
+                            pendienteConfirmacion: null,
+                            historialConversacion: nuevoHistorial,
+                            procesando: false  // Asegurar que se limpia
+                        };
+                        user.changed('context', true);
+                        await user.save();
+                    }
+                    return;
+                }
+
+                // Si no confirma ni cancela claramente, pedimos de nuevo
+                await msg.reply('Por favor, respondé *SI* para confirmar o *NO* para cancelar.');
                 return;
             }
-
-            // Si no confirma ni cancela claramente, pedimos de nuevo
-            await msg.reply('Por favor, respondé *SI* para confirmar o *NO* para cancelar.');
-            return;
         }
 
         // 3. SISTEMA DE COMMANDS DIRECTOS (SIN IA)
@@ -271,17 +286,26 @@ export const handleIncomingMessage = async (msg: any) => {
             ].slice(-10);
 
             user.context = {
-                ...(user.context || {}),
-                pendienteConfirmacion: {
-                    accionOriginal: accion,
-                    datos: { accion, ticketData }
-                },
-                historialConversacion: nuevoHistorial
-            };
+                    ...(user.context || {}),
+                    pendienteConfirmacion: {
+                        accionOriginal: accion,
+                        datos: { accion, ticketData },
+                        timestamp: Date.now()
+                    },
+                    historialConversacion: nuevoHistorial
+                };
             user.changed('context', true);
             await user.save();
 
-            await msg.reply(resumen);
+            try {
+                await msg.reply(resumen);
+            } catch (e) {
+                console.error('❌ Error al enviar resumen de confirmacion:', e);
+                // Si falla el envío, limpiar pendienteConfirmacion
+                user.context = { ...(user.context || {}), pendienteConfirmacion: null };
+                user.changed('context', true);
+                await user.save();
+            }
             return;
         }
 
