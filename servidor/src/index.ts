@@ -2,7 +2,8 @@ import { createServer } from 'http';
 import app from './app.js';
 import { initSocket } from './socket/server.js';
 import { sequelize } from './models/models.js';
-import { client } from './bot/whatsapp.js'; // <-- 1. Importar el cliente
+import { client } from './bot/whatsapp.js';
+import { iniciarVerificadorPendientes } from './bot/handler.js';
 
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 4001;
@@ -14,14 +15,15 @@ async function bootstrap() {
         await sequelize.sync({ alter: true });
         console.log('✅ Base de datos sincronizada correctamente.');
 
-        // 2. Inicializar WhatsApp
-        client.initialize(); 
+        client.initialize();
 
         httpServer.listen(PORT, () => {
             console.log('--------------------------------------------------');
             console.log(`🚀 Servidor Norbridge listo en: http://localhost:${PORT}`);
             console.log('--------------------------------------------------');
         });
+
+        iniciarVerificadorPendientes();
 
     } catch (error) {
         console.error('❌ Error fatal al iniciar el servidor:', error);

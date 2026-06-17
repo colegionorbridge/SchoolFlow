@@ -27,7 +27,54 @@ interface RespuestaIA {
 
 // Tiempo máximo de bloqueo "procesando" (2 minutos)
 const TIMEOUT_PROCESANDO = 2 * 60 * 1000;
-const TIMEOUT_PENDIENTE = 30 * 60 * 1000; // 30 minutos
+const TIMEOUT_PENDIENTE = 10 * 60 * 1000; // 10 minutos
+
+// Verificador periódico de pendientes vencidos (recuperación ante reinicios y conexión DB caída)
+async function verificarPendientesVencidos() {
+    try {
+        const usuarios = await User.findAll();
+        const ahora = Date.now();
+
+        for (const user of usuarios) {
+            const pendiente = user.context?.pendienteConfirmacion;
+            if (!pendiente || !pendiente.timestamp) continue;
+
+            if (ahora - pendiente.timestamp > TIMEOUT_PENDIENTE) {
+                console.log(`⏱️ [Verificador] pendienteConfirmacion expirado para ${user.telefono}`);
+
+                const historial = user.context?.historialConversacion || [];
+                const nuevoHistorial = [
+                    ...historial,
+                    { role: 'assistant', content: 'Se canceló una acción pendiente por tiempo de espera.' }
+                ].slice(-10);
+
+                user.context = {
+                    ...(user.context || {}),
+                    pendienteConfirmacion: null,
+                    historialConversacion: nuevoHistorial
+                };
+                user.changed('context', true);
+                await user.save();
+
+                try {
+                    const chatId = `${user.telefono}@c.us`;
+                    await client.sendMessage(chatId, '⏱️ Pasaron más de 30 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                    console.log(`⏱️ [Verificador] Mensaje enviado a ${user.telefono}`);
+                } catch (e) {
+                    console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono}:`, e);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('❌ [Verificador] Error general:', e);
+    }
+}
+
+export function iniciarVerificadorPendientes(intervaloMs: number = 30000) {
+    verificarPendientesVencidos();
+    setInterval(verificarPendientesVencidos, intervaloMs);
+    console.log(`⏱️ [Verificador] Iniciado — cada ${intervaloMs / 1000}s revisando pendientes vencidos`);
+}
 
 export const handleIncomingMessage = async (msg: any) => {
     // --- ESCUDO ANTI-DUPLICADOS ---
