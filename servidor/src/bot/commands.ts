@@ -286,7 +286,7 @@ ${notasTexto}`
     }
 
     // Frases de cierre (se usa en el patron de comentarios y en el de cierre directo)
-    const frasesCierre = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado'];
+    const frasesCierre = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado', 'solucionó'];
 
     // Palabras de consulta que indican que el usuario QUIERE VER info, NO agregar
     const palabrasConsulta = ['ver comentarios', 'ver notas', 'ver historial', 'mostrar comentarios', 'mostrar notas', 'mostrar historial', 'leer comentarios', 'leer notas', 'leer historial', 'consultar historial', 'seguimiento del ticket'];

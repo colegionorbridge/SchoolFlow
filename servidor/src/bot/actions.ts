@@ -37,7 +37,7 @@ export async function ejecutarAccion(
         await msg.reply(`✅ Ticket *#${nuevoTicket.id}* creado exitosamente.`);
     }
 
-    if ((accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') && ticketData?.id) {
+    if ((accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') && ticketData?.id != null) {
         const ticket = await Ticket.findByPk(ticketData.id);
 
         if (!ticket) {

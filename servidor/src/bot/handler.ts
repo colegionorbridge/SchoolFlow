@@ -271,13 +271,50 @@ export const handleIncomingMessage = async (msg: any) => {
                     `📝 Descripcion: ${ticketData?.descripcion}\n` +
                     `📍 Ubicacion: ${ticketData?.ubicacion}\n\n` +
                     `Respondé *SI* para confirmar o *NO* para cancelar.`;
-            } else if (accion === 'AGREGAR_COMENTARIO') {
-                resumen = `Vas a agregar un comentario al ticket *#${ticketData?.id}*: "${ticketData?.asunto}"\n\n` +
-                    `💬 Comentario: "${ticketData?.comentario}"\n\n` +
-                    `Respondé *SI* para confirmar o *NO* para cancelar.`;
-            } else if (accion === 'CERRAR_TICKET') {
-                resumen = `Vas a cerrar el ticket *#${ticketData?.id}*: "${ticketData?.asunto}"\n\n` +
-                    `Respondé *SI* para confirmar o *NO* para cancelar.`;
+            } else if (accion === 'CERRAR_TICKET' || accion === 'AGREGAR_COMENTARIO') {
+                let ticketEncontrado = null;
+
+                if (ticketData?.id && ticketData.id !== 0) {
+                    ticketEncontrado = await Ticket.findByPk(ticketData.id);
+                    if (ticketEncontrado && ticketEncontrado.userTelefono !== telefono) {
+                        ticketEncontrado = null;
+                    }
+                }
+
+                if (!ticketEncontrado) {
+                    ticketEncontrado = await Ticket.findOne({
+                        where: {
+                            userTelefono: telefono,
+                            estado: ['abierto', 'en_proceso']
+                        },
+                        order: [['createdAt', 'DESC']]
+                    });
+                }
+
+                if (!ticketEncontrado) {
+                    const nuevoHistorial = [
+                        ...historialConversacion,
+                        { role: 'user', content: msg.body },
+                        { role: 'assistant', content: 'No tenés tickets abiertos para cerrar o comentar.' }
+                    ].slice(-10);
+                    user.context = { ...(user.context || {}), historialConversacion: nuevoHistorial };
+                    user.changed('context', true);
+                    await user.save();
+                    await msg.reply('No tenés tickets abiertos para cerrar o comentar.');
+                    return;
+                }
+
+                ticketData.id = ticketEncontrado.id;
+                ticketData.asunto = ticketEncontrado.asunto;
+
+                if (accion === 'CERRAR_TICKET') {
+                    resumen = `Vas a cerrar el ticket *#${ticketEncontrado.id}*: "${ticketEncontrado.asunto}"\n\n` +
+                        `Respondé *SI* para confirmar o *NO* para cancelar.`;
+                } else {
+                    resumen = `Vas a agregar un comentario al ticket *#${ticketEncontrado.id}*: "${ticketEncontrado.asunto}"\n\n` +
+                        `💬 Comentario: "${ticketData?.comentario}"\n\n` +
+                        `Respondé *SI* para confirmar o *NO* para cancelar.`;
+                }
             }
 
             // Guardar historial con el resumen que se enviará al usuario
