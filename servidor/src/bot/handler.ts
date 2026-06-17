@@ -5,7 +5,7 @@ import { manejarRegistro } from './registro.js';
 import { processCommand } from './commands.js';
 import { ejecutarAccion } from './actions.js';
 import { io } from '../socket/server.js';
-import { client } from './whatsapp.js';
+import { client, clientReady } from './whatsapp.js';
 
 // Escudo anti-duplicados: evita que reconexiones o re-emisiones
 // de whatsapp-web.js procesen el mismo mensaje dos veces.
@@ -42,6 +42,20 @@ async function verificarPendientesVencidos() {
             if (ahora - pendiente.timestamp > TIMEOUT_PENDIENTE) {
                 console.log(`⏱️ [Verificador] pendienteConfirmacion expirado para ${user.telefono}`);
 
+                if (!clientReady()) {
+                    console.log(`⏱️ [Verificador] Cliente no listo aún, se reintentará en el próximo ciclo para ${user.telefono}`);
+                    continue;
+                }
+
+                try {
+                    const chatId = `${user.telefono}@c.us`;
+                    await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                    console.log(`⏱️ [Verificador] Mensaje enviado a ${user.telefono}`);
+                } catch (e) {
+                    console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono} (se reintentará):`, e);
+                    continue;
+                }
+
                 const historial = user.context?.historialConversacion || [];
                 const nuevoHistorial = [
                     ...historial,
@@ -55,14 +69,6 @@ async function verificarPendientesVencidos() {
                 };
                 user.changed('context', true);
                 await user.save();
-
-                try {
-                    const chatId = `${user.telefono}@c.us`;
-                    await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
-                    console.log(`⏱️ [Verificador] Mensaje enviado a ${user.telefono}`);
-                } catch (e) {
-                    console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono}:`, e);
-                }
             }
         }
     } catch (e) {
@@ -388,29 +394,36 @@ export const handleIncomingMessage = async (msg: any) => {
             user.changed('context', true);
             await user.save();
 
-            // Programar aviso automático a los 30 min si no responde
+            // Programar aviso automático a los 10 min si no responde
             setTimeout(async () => {
                 try {
                     const userActual = await User.findByPk(telefono);
-                    if (userActual?.context?.pendienteConfirmacion) {
-                        const historial = userActual.context.historialConversacion || [];
-                        const nuevoHistorial = [
-                            ...historial,
-                            { role: 'assistant', content: 'Se canceló una acción pendiente por tiempo de espera.' }
-                        ].slice(-10);
-                        userActual.context = {
-                            ...userActual.context,
-                            pendienteConfirmacion: null,
-                            historialConversacion: nuevoHistorial
-                        };
-                        userActual.changed('context', true);
-                        await userActual.save();
-                        const chatId = `${telefono}@c.us`;
-                        await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
-                        console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
+                    if (!userActual?.context?.pendienteConfirmacion) return;
+
+                    if (!clientReady()) {
+                        console.log(`⏱️ [Timeout] Cliente no listo, el verificador reintentará para ${telefono}`);
+                        return;
                     }
+
+                    const chatId = `${telefono}@c.us`;
+                    await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                    console.log(`⏱️ [Timeout] Mensaje enviado a ${telefono}`);
+
+                    const historial = userActual.context.historialConversacion || [];
+                    const nuevoHistorial = [
+                        ...historial,
+                        { role: 'assistant', content: 'Se canceló una acción pendiente por tiempo de espera.' }
+                    ].slice(-10);
+
+                    userActual.context = {
+                        ...userActual.context,
+                        pendienteConfirmacion: null,
+                        historialConversacion: nuevoHistorial
+                    };
+                    userActual.changed('context', true);
+                    await userActual.save();
                 } catch (e) {
-                    console.error(`❌ Error en timeout de confirmación para ${telefono}:`, e);
+                    console.error(`❌ Error en timeout de confirmación para ${telefono} (el verificador reintentará):`, e);
                 }
             }, TIMEOUT_PENDIENTE);
 

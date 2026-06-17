@@ -64,4 +64,8 @@ client.on('message', async (msg) => {
     await handleIncomingMessage(msg);
 });
 
-export { client };
+function clientReady(): boolean {
+    return conectado && !!client.info;
+}
+
+export { client, clientReady };
