@@ -36,7 +36,7 @@ export const processCommand = async (msg: any, user: any): Promise<CommandResult
     const textoLower = texto.toLowerCase();
     
     // Patrón: "se arregló", "ya funciona" -> Cerrar ticket (manejo rápido sin comando)
-    const frasesCierreRapido = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado'];
+    const frasesCierreRapido = ['se arreglo', 'ya funciona', 'ya esta listo', 'ya se resolvio', 'problema resuelto', 'solucionado', 'solucionó'];
     if (frasesCierreRapido.some(frase => textoLower.includes(frase)) && user.context?.pendienteConfirmacion) {
         // Si ya hay una confirmación pendiente, delegar a handler.ts
         return { handled: false };
