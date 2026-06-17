@@ -4,7 +4,8 @@ import { consultarGroq } from './groq.js';
 import { manejarRegistro } from './registro.js';
 import { processCommand } from './commands.js';
 import { ejecutarAccion } from './actions.js';
-import { io } from '../socket/server.js'; 
+import { io } from '../socket/server.js';
+import { client } from './whatsapp.js';
 
 // Escudo anti-duplicados: evita que reconexiones o re-emisiones
 // de whatsapp-web.js procesen el mismo mensaje dos veces.
@@ -335,6 +336,32 @@ export const handleIncomingMessage = async (msg: any) => {
                 };
             user.changed('context', true);
             await user.save();
+
+            // Programar aviso automático a los 30 min si no responde
+            setTimeout(async () => {
+                try {
+                    const userActual = await User.findByPk(telefono);
+                    if (userActual?.context?.pendienteConfirmacion) {
+                        const historial = userActual.context.historialConversacion || [];
+                        const nuevoHistorial = [
+                            ...historial,
+                            { role: 'assistant', content: 'Se canceló una acción pendiente por tiempo de espera.' }
+                        ].slice(-10);
+                        userActual.context = {
+                            ...userActual.context,
+                            pendienteConfirmacion: null,
+                            historialConversacion: nuevoHistorial
+                        };
+                        userActual.changed('context', true);
+                        await userActual.save();
+                        const chatId = `${telefono}@c.us`;
+                        await client.sendMessage(chatId, '⏱️ Pasaron más de 30 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                        console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
+                    }
+                } catch (e) {
+                    console.error(`❌ Error en timeout de confirmación para ${telefono}:`, e);
+                }
+            }, TIMEOUT_PENDIENTE);
 
             try {
                 await msg.reply(resumen);
