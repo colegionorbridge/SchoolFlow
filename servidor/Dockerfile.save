@@ -1,0 +1,5 @@
+FROM node:22-slim
+
+# Instalamos dependencias para Chrome y herramientas de red
+RUN apt-get update && apt-get install -y \
+    wget gnupg ca-certi

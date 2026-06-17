@@ -58,7 +58,7 @@ async function verificarPendientesVencidos() {
 
                 try {
                     const chatId = `${user.telefono}@c.us`;
-                    await client.sendMessage(chatId, '⏱️ Pasaron más de 30 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                    await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                     console.log(`⏱️ [Verificador] Mensaje enviado a ${user.telefono}`);
                 } catch (e) {
                     console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono}:`, e);
@@ -153,7 +153,7 @@ export const handleIncomingMessage = async (msg: any) => {
                 user.changed('context', true);
                 await user.save();
                 console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
-                await msg.reply('⏱️ Pasaron más de 30 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                await msg.reply('⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                 return;
             } else {
                 const msgLower = msg.body.toLowerCase();
@@ -352,6 +352,10 @@ export const handleIncomingMessage = async (msg: any) => {
                     return;
                 }
 
+                if (!ticketData) {
+                    await msg.reply('Error: no se encontraron datos del ticket.');
+                    return;
+                }
                 ticketData.id = ticketEncontrado.id;
                 ticketData.asunto = ticketEncontrado.asunto;
 
@@ -402,7 +406,7 @@ export const handleIncomingMessage = async (msg: any) => {
                         userActual.changed('context', true);
                         await userActual.save();
                         const chatId = `${telefono}@c.us`;
-                        await client.sendMessage(chatId, '⏱️ Pasaron más de 30 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                        await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                         console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
                     }
                 } catch (e) {
