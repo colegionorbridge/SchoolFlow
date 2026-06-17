@@ -101,13 +101,16 @@ FORMATO JSON ESTRICTO:
   "respuesta": "Tu respuesta",
   "accion": "CREAR_TICKET" | "AGREGAR_COMENTARIO" | "CERRAR_TICKET" | "MOSTRAR_TICKETS" | "NINGUNA",
   "ticketData": {
-      "id": 0,
       "asunto": "",
       "descripcion": "",
       "ubicacion": "",
       "comentario": ""
   }
 }
+
+REGLAS PARA ticketData.id:
+- Si accion es "CREAR_TICKET": NO incluyas "id" en ticketData.
+- Si accion es "CERRAR_TICKET" o "AGREGAR_COMENTARIO": incluí "id" con el número REAL del ticket (ej: 5). Usá los IDs de los TICKETS ACTIVOS listados abajo. NUNCA uses 0.
 
 TICKETS ACTIVOS (mÃ¡x 5):
 ${infoTickets}`;
