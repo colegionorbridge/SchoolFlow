@@ -105,6 +105,8 @@ export const handleIncomingMessage = async (msg: any) => {
                 user.changed('context', true);
                 await user.save();
                 console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
+                await msg.reply('⏱️ Pasaron más de 30 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
+                return;
             } else {
                 const msgLower = msg.body.toLowerCase();
                 const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
