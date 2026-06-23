@@ -4,6 +4,7 @@ import TicketModal from '../TicketModal/TicketModal';
 import EditUserModal from './EditUserModal';
 import SectoresPanel from './SectoresPanel';
 import RolesPanel from './RolesPanel';
+import StatsPanel from './StatsPanel';
 import styles from './Dashboard.module.css';
 
 const ORDEN_ESTADO = { 'abierto': 1, 'en_proceso': 2, 'cerrado': 3 };
@@ -33,6 +34,9 @@ const Dashboard: React.FC = () => {
   // ESTADO PARA MOSTRAR PANEL DE ROLES
   const [showRolesPanel, setShowRolesPanel] = useState(false);
 
+  // ESTADO PARA MOSTRAR PANEL DE ESTADÍSTICAS
+  const [showStatsPanel, setShowStatsPanel] = useState(false);
+
   useEffect(() => {
     cargarDatosIniciales();
     cargarRoles();
@@ -56,16 +60,25 @@ const Dashboard: React.FC = () => {
     setShowRolesPanel(true);
     setShowUsersPanel(false);
     setShowSectoresPanel(false);
+    setShowStatsPanel(false);
+  };
+
+  const handleShowStats = () => {
+    setShowStatsPanel(true);
+    setShowUsersPanel(false);
+    setShowSectoresPanel(false);
+    setShowRolesPanel(false);
   };
 
   // Mostrar tickets cuando no hay ningún panel abierto
-  const showTickets = !showUsersPanel && !showSectoresPanel && !showRolesPanel;
+  const showTickets = !showUsersPanel && !showSectoresPanel && !showRolesPanel && !showStatsPanel;
 
   // Función para mostrar solo tickets
   const handleShowTickets = () => {
     setShowUsersPanel(false);
     setShowSectoresPanel(false);
     setShowRolesPanel(false);
+    setShowStatsPanel(false);
   };
 
   // Función para actualizar el ticket en el servidor
@@ -203,6 +216,14 @@ const Dashboard: React.FC = () => {
           </button>
           <button 
             onClick={() => {
+              handleShowStats();
+            }}
+            className={`${styles.navButton} ${showStatsPanel ? styles.activeNavButton : ''}`}
+          >
+            Estadísticas
+          </button>
+          <button 
+            onClick={() => {
               localStorage.removeItem('token');
               window.location.href = '/login';
             }}
@@ -264,6 +285,9 @@ const Dashboard: React.FC = () => {
 
       {/* PANEL DE ROLES */}
       {showRolesPanel && <RolesPanel />}
+
+      {/* PANEL DE ESTADÍSTICAS */}
+      {showStatsPanel && <StatsPanel />}
 
       {/* SECCIÓN DE TICKETS - Solo se muestra cuando no hay paneles abiertos */}
       {showTickets && (

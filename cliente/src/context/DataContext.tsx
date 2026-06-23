@@ -71,6 +71,17 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+function mergeArrays<T extends { id?: any; telefono?: any }>(prev: T[], fetched: T[], key: 'id' | 'telefono'): T[] {
+  const prevMap = new Map(prev.map(item => [item[key], item]));
+  const result = fetched.map(item => {
+    const existing = prevMap.get(item[key]);
+    return existing || item;
+  });
+  const prevIds = new Set(fetched.map(item => item[key]));
+  const extras = prev.filter(item => !prevIds.has(item[key]));
+  return [...extras, ...result];
+}
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -108,8 +119,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const dataTickets = await resTickets.json();
       const dataUsuarios = await resUsuarios.json();
 
-      setTickets(dataTickets);
-      setUsuarios(dataUsuarios);
+      setTickets(prev => mergeArrays(prev, dataTickets, 'id'));
+      setUsuarios(prev => mergeArrays(prev, dataUsuarios, 'telefono'));
     } catch (error) {
       console.error("Error al obtener datos iniciales de la API:", error);
     } finally {
@@ -175,11 +186,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     });
 
+    // Catch-up al reconectar: refetch datos completos para no perder eventos offline
+    socket.on('reconnect', () => {
+      console.log('🔄 Socket reconectado, refetching datos...');
+      cargarDatosIniciales();
+    });
+
     return () => {
       socket.off('nuevo-ticket');
       socket.off('ticket-actualizado');
       socket.off('usuario-actualizado');
       socket.off('usuario-registrado-nuevo');
+      socket.off('reconnect');
     };
   }, [notificationSound]); // Agregamos el audio como dependencia
 

@@ -2,6 +2,7 @@ import express, { type Application, type Request, type Response, type NextFuncti
 import cors from 'cors';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const app: Application = express();
@@ -35,5 +36,8 @@ app.use('/api/auth', authRoutes);
 
 // 5. Rutas protegidas del dashboard (requieren JWT)
 app.use('/api', authMiddleware, dashboardRoutes);
+
+// 6. Rutas de estadísticas (protegidas)
+app.use('/api', authMiddleware, statsRoutes);
 
 export default app;
