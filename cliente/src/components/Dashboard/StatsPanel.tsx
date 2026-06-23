@@ -19,9 +19,8 @@ interface SectorData {
 }
 
 interface MesData {
-  mes: string;
+  label: string;
   creados: number;
-  cerrados: number;
 }
 
 interface UsuarioTop {
@@ -33,6 +32,8 @@ interface UsuarioTop {
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const mesesNom = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 const StatsPanel: React.FC = () => {
   const [resumen, setResumen] = useState<Resumen | null>(null);
@@ -56,7 +57,10 @@ const StatsPanel: React.FC = () => {
     .then(([r, s, m, u]) => {
       setResumen(r);
       setPorSector(s);
-      setPorMes(m);
+      setPorMes((m as { mes: string; creados: number }[]).map(d => {
+        const [anio, mesNum] = d.mes.split('-');
+        return { label: `${mesesNom[parseInt(mesNum) - 1]} ${anio}`, creados: d.creados };
+      }));
       setUsuariosTop(u);
     })
     .catch(console.error)
@@ -68,8 +72,7 @@ const StatsPanel: React.FC = () => {
   }
 
   const maxSectorTotal = Math.max(...porSector.map(s => s.total), 1);
-
-  const maxChartValue = Math.max(...porMes.map(m => Math.max(m.creados, m.cerrados)), 1);
+  const maxMesCreados = Math.max(...porMes.map(m => m.creados), 1);
 
   return (
     <div className={styles.container}>
@@ -113,28 +116,22 @@ const StatsPanel: React.FC = () => {
 
         <section className={styles.section}>
           <h3>Tickets por Mes</h3>
-          <div className={styles.chart}>
-            {porMes.map(m => {
-              const hCreados = (m.creados / maxChartValue) * 100;
-              const hCerrados = (m.cerrados / maxChartValue) * 100;
-              const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-              const [anio, mesNum] = m.mes.split('-');
-              const label = `${meses[parseInt(mesNum) - 1]} ${anio}`;
-              return (
-                <div key={m.mes} className={styles.chartCol} title={`${label}: ${m.creados} creados, ${m.cerrados} cerrados`}>
-                  <div className={styles.chartBars}>
-                    <div className={styles.barCreados} style={{ height: `${hCreados}%` }} />
-                    <div className={styles.barCerrados} style={{ height: `${hCerrados}%` }} />
-                  </div>
-                  <span className={styles.chartLabel}>{label}</span>
+          <div className={styles.barList}>
+            {porMes.map(m => (
+              <div key={m.label} className={styles.barRow}>
+                <div className={styles.barLabel}>
+                  <span>{m.label}</span>
+                  <span className={styles.barCount}>{m.creados}</span>
                 </div>
-              );
-            })}
+                <div className={styles.barTrack}>
+                  <div
+                    className={styles.barFillMes}
+                    style={{ width: `${(m.creados / maxMesCreados) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
             {porMes.length === 0 && <p className={styles.empty}>Sin datos</p>}
-          </div>
-          <div className={styles.legend}>
-            <span><span className={styles.dotCreados} /> Creados</span>
-            <span><span className={styles.dotCerrados} /> Cerrados</span>
           </div>
         </section>
       </div>
