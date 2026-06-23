@@ -40,6 +40,7 @@ const StatsPanel: React.FC = () => {
   const [porSector, setPorSector] = useState<SectorData[]>([]);
   const [porMes, setPorMes] = useState<MesData[]>([]);
   const [usuariosTop, setUsuariosTop] = useState<UsuarioTop[]>([]);
+  const [sinCompletar, setSinCompletar] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const headers: HeadersInit = {
@@ -52,9 +53,10 @@ const StatsPanel: React.FC = () => {
       fetch(`${API_URL}/api/stats/resumen`, { headers }).then(r => r.json()),
       fetch(`${API_URL}/api/stats/por-sector`, { headers }).then(r => r.json()),
       fetch(`${API_URL}/api/stats/por-mes`, { headers }).then(r => r.json()),
-      fetch(`${API_URL}/api/stats/usuarios-top`, { headers }).then(r => r.json())
+      fetch(`${API_URL}/api/stats/usuarios-top`, { headers }).then(r => r.json()),
+      fetch(`${API_URL}/api/usuarios`, { headers }).then(r => r.json())
     ])
-    .then(([r, s, m, u]) => {
+    .then(([r, s, m, u, usrs]) => {
       setResumen(r);
       setPorSector(s);
       setPorMes((m as { mes: string; creados: number }[]).map(d => {
@@ -62,6 +64,7 @@ const StatsPanel: React.FC = () => {
         return { label: `${mesesNom[parseInt(mesNum) - 1]} ${anio}`, creados: d.creados };
       }));
       setUsuariosTop(u);
+      setSinCompletar((usrs as { registroCompleto?: boolean }[]).filter(x => !x.registroCompleto).length);
     })
     .catch(console.error)
     .finally(() => setLoading(false));
@@ -83,8 +86,8 @@ const StatsPanel: React.FC = () => {
         <Card label="Abiertos" value={resumen?.abiertos ?? 0} color="#d97706" />
         <Card label="En Proceso" value={resumen?.enProceso ?? 0} color="#2563eb" />
         <Card label="Cerrados" value={resumen?.cerrados ?? 0} color="#059669" />
-        <Card label="Alta Prioridad" value={resumen?.altaPrioridad ?? 0} color="#dc2626" />
         <Card label="Usuarios Registrados" value={resumen?.usuariosRegistrados ?? 0} color="#7c3aed" />
+        <Card label="Sin Completar" value={sinCompletar} color="#dc2626" />
       </div>
 
       <div className={styles.columnsGrid}>

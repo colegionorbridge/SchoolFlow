@@ -294,19 +294,6 @@ const Dashboard: React.FC = () => {
       {/* SECCIÓN DE TICKETS - Solo se muestra cuando no hay paneles abiertos */}
       {showTickets && (
         <>
-          <section className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <h3>Tickets Abiertos</h3>
-              <p className={styles.statNumber}>
-                {tickets.filter(t => t.estado === 'abierto').length}
-              </p>
-            </div>
-            <div className={styles.statCard}>
-              <h3>Usuarios Registrados</h3>
-              <p className={styles.statNumber}>{usuarios.length}</p>
-            </div>
-          </section>
-
           <section className={styles.tableSection}>
             <h2>Tickets Recientes</h2>
             <table className={styles.table}>
