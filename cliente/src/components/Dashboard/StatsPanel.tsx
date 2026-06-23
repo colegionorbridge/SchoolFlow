@@ -18,8 +18,8 @@ interface SectorData {
   cerrados: number;
 }
 
-interface DiaData {
-  fecha: string;
+interface MesData {
+  mes: string;
   creados: number;
   cerrados: number;
 }
@@ -37,7 +37,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const StatsPanel: React.FC = () => {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [porSector, setPorSector] = useState<SectorData[]>([]);
-  const [porDia, setPorDia] = useState<DiaData[]>([]);
+  const [porMes, setPorMes] = useState<MesData[]>([]);
   const [usuariosTop, setUsuariosTop] = useState<UsuarioTop[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,13 +50,13 @@ const StatsPanel: React.FC = () => {
     Promise.all([
       fetch(`${API_URL}/api/stats/resumen`, { headers }).then(r => r.json()),
       fetch(`${API_URL}/api/stats/por-sector`, { headers }).then(r => r.json()),
-      fetch(`${API_URL}/api/stats/por-dia`, { headers }).then(r => r.json()),
+      fetch(`${API_URL}/api/stats/por-mes`, { headers }).then(r => r.json()),
       fetch(`${API_URL}/api/stats/usuarios-top`, { headers }).then(r => r.json())
     ])
-    .then(([r, s, d, u]) => {
+    .then(([r, s, m, u]) => {
       setResumen(r);
       setPorSector(s);
-      setPorDia(d);
+      setPorMes(m);
       setUsuariosTop(u);
     })
     .catch(console.error)
@@ -69,7 +69,7 @@ const StatsPanel: React.FC = () => {
 
   const maxSectorTotal = Math.max(...porSector.map(s => s.total), 1);
 
-  const maxChartValue = Math.max(...porDia.map(d => Math.max(d.creados, d.cerrados)), 1);
+  const maxChartValue = Math.max(...porMes.map(m => Math.max(m.creados, m.cerrados)), 1);
 
   return (
     <div className={styles.container}>
@@ -112,26 +112,25 @@ const StatsPanel: React.FC = () => {
         </section>
 
         <section className={styles.section}>
-          <h3>Tendencia (últimos 30 días)</h3>
+          <h3>Tickets por Mes</h3>
           <div className={styles.chart}>
-            {porDia.map(d => {
-              const hCreados = (d.creados / maxChartValue) * 100;
-              const hCerrados = (d.cerrados / maxChartValue) * 100;
-              const label = d.fecha.slice(5);
+            {porMes.map(m => {
+              const hCreados = (m.creados / maxChartValue) * 100;
+              const hCerrados = (m.cerrados / maxChartValue) * 100;
+              const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+              const [anio, mesNum] = m.mes.split('-');
+              const label = `${meses[parseInt(mesNum) - 1]} ${anio}`;
               return (
-                <div key={d.fecha} className={styles.chartCol} title={`${d.fecha}: ${d.creados} creados, ${d.cerrados} cerrados`}>
+                <div key={m.mes} className={styles.chartCol} title={`${label}: ${m.creados} creados, ${m.cerrados} cerrados`}>
                   <div className={styles.chartBars}>
                     <div className={styles.barCreados} style={{ height: `${hCreados}%` }} />
                     <div className={styles.barCerrados} style={{ height: `${hCerrados}%` }} />
                   </div>
-                  {porDia.length <= 31 && (
-                    <span className={styles.chartLabel}>
-                      {parseInt(label.split('-')[1]) === 1 || d === porDia[0] || d === porDia[porDia.length - 1] ? label : ''}
-                    </span>
-                  )}
+                  <span className={styles.chartLabel}>{label}</span>
                 </div>
               );
             })}
+            {porMes.length === 0 && <p className={styles.empty}>Sin datos</p>}
           </div>
           <div className={styles.legend}>
             <span><span className={styles.dotCreados} /> Creados</span>

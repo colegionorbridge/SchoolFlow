@@ -49,36 +49,21 @@ export const getPorSector = async (_req: Request, res: Response) => {
   }
 };
 
-export const getPorDia = async (_req: Request, res: Response) => {
+export const getPorMes = async (_req: Request, res: Response) => {
   try {
     const data = await sequelize.query(`
       SELECT
-        TO_CHAR(d.fecha, 'YYYY-MM-DD') AS fecha,
-        COALESCE(c.creados, 0)::int AS creados,
-        COALESCE(r.cerrados, 0)::int AS cerrados
-      FROM (
-        SELECT generate_series(
-          CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, '1 day'
-        )::date AS fecha
-      ) d
-      LEFT JOIN (
-        SELECT DATE("createdAt") AS fecha, COUNT(*)::int AS creados
-        FROM tickets
-        WHERE "createdAt" >= CURRENT_DATE - INTERVAL '29 days'
-        GROUP BY DATE("createdAt")
-      ) c ON d.fecha = c.fecha
-      LEFT JOIN (
-        SELECT DATE("updatedAt") AS fecha, COUNT(*)::int AS cerrados
-        FROM tickets
-        WHERE estado = 'cerrado' AND "updatedAt" >= CURRENT_DATE - INTERVAL '29 days'
-        GROUP BY DATE("updatedAt")
-      ) r ON d.fecha = r.fecha
-      ORDER BY d.fecha
+        TO_CHAR(DATE_TRUNC('month', "createdAt"), 'YYYY-MM') AS mes,
+        COUNT(*)::int AS creados,
+        COUNT(*) FILTER (WHERE estado = 'cerrado')::int AS cerrados
+      FROM tickets
+      GROUP BY DATE_TRUNC('month', "createdAt")
+      ORDER BY mes
     `, { type: QueryTypes.SELECT });
     res.json(data);
   } catch (error) {
-    console.error('Error en getPorDia:', error);
-    res.status(500).json({ error: 'Error al obtener tickets por día' });
+    console.error('Error en getPorMes:', error);
+    res.status(500).json({ error: 'Error al obtener tickets por mes' });
   }
 };
 
