@@ -25,7 +25,15 @@ export const getPorSector = async (_req: Request, res: Response) => {
   try {
     const data = await sequelize.query(`
       SELECT
-        COALESCE(NULLIF(SPLIT_PART(ubicacion, ' - ', 1), ''), 'Sin sector') AS sector,
+        CASE UPPER(TRIM(SPLIT_PART(ubicacion, ' - ', 1)))
+          WHEN 'PRIMARIA' THEN 'Primaria'
+          WHEN 'SECUNDARIA' THEN 'Secundaria'
+          WHEN 'SECTOR COMUN' THEN 'Sector Comun'
+          WHEN 'SECTOR COMÚN' THEN 'Sector Comun'
+          WHEN 'INICIAL' THEN 'Inicial'
+          WHEN 'JARDIN' THEN 'Inicial'
+          ELSE COALESCE(NULLIF(TRIM(SPLIT_PART(ubicacion, ' - ', 1)), ''), 'Sin sector')
+        END AS sector,
         COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE estado = 'abierto')::int AS abiertos,
         COUNT(*) FILTER (WHERE estado = 'en_proceso')::int AS "enProceso",
