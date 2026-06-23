@@ -1,5 +1,6 @@
 import { type Request, type Response } from 'express';
-import { sequelize, Ticket, User } from '../models/models.js';
+import { QueryTypes } from 'sequelize';
+import { sequelize } from '../models/models.js';
 
 export const getResumen = async (_req: Request, res: Response) => {
   try {
@@ -12,7 +13,7 @@ export const getResumen = async (_req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE prioridad = 'alta')::int AS "altaPrioridad",
         (SELECT COUNT(*)::int FROM usuarios WHERE "registroCompleto" = true) AS "usuariosRegistrados"
       FROM tickets
-    `);
+    `, { type: QueryTypes.SELECT });
     res.json(data[0]);
   } catch (error) {
     console.error('Error en getResumen:', error);
@@ -32,8 +33,8 @@ export const getPorSector = async (_req: Request, res: Response) => {
       FROM tickets
       GROUP BY sector
       ORDER BY total DESC
-    `);
-    res.json(data[0]);
+    `, { type: QueryTypes.SELECT });
+    res.json(data);
   } catch (error) {
     console.error('Error en getPorSector:', error);
     res.status(500).json({ error: 'Error al obtener tickets por sector' });
@@ -65,8 +66,8 @@ export const getPorDia = async (_req: Request, res: Response) => {
         GROUP BY DATE("updatedAt")
       ) r ON d.fecha = r.fecha
       ORDER BY d.fecha
-    `);
-    res.json(data[0]);
+    `, { type: QueryTypes.SELECT });
+    res.json(data);
   } catch (error) {
     console.error('Error en getPorDia:', error);
     res.status(500).json({ error: 'Error al obtener tickets por día' });
@@ -79,23 +80,23 @@ export const getUsuariosTop = async (_req: Request, res: Response) => {
       SELECT
         u.telefono,
         u."nombreCompleto",
-        COUNT(t.id)::int AS totalTickets,
-        COUNT(*) FILTER (WHERE t.estado IN ('abierto', 'en_proceso'))::int AS ticketsActivos,
-        COUNT(*) FILTER (WHERE t.estado = 'cerrado')::int AS ticketsCerrados,
+        COUNT(t.id)::int AS "totalTickets",
+        COUNT(*) FILTER (WHERE t.estado IN ('abierto', 'en_proceso'))::int AS "ticketsActivos",
+        COUNT(*) FILTER (WHERE t.estado = 'cerrado')::int AS "ticketsCerrados",
         ROUND(AVG(
           CASE
             WHEN t.estado = 'cerrado' THEN EXTRACT(EPOCH FROM (t."updatedAt" - t."createdAt")) / 60
             ELSE NULL
           END
-        ))::int AS tiempoPromedioMinutos
+        ))::int AS "tiempoPromedioMinutos"
       FROM usuarios u
       LEFT JOIN tickets t ON t."userTelefono" = u.telefono
       WHERE u."registroCompleto" = true
       GROUP BY u.telefono, u."nombreCompleto"
-      ORDER BY totalTickets DESC
+      ORDER BY "totalTickets" DESC
       LIMIT 20
-    `);
-    res.json(data[0]);
+    `, { type: QueryTypes.SELECT });
+    res.json(data);
   } catch (error) {
     console.error('Error en getUsuariosTop:', error);
     res.status(500).json({ error: 'Error al obtener top usuarios' });
