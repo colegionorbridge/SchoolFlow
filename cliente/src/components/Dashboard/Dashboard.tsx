@@ -48,12 +48,14 @@ const Dashboard: React.FC = () => {
     setShowUsersPanel(true);
     setShowSectoresPanel(false);
     setShowRolesPanel(false);
+    setShowStatsPanel(false);
   };
 
   const handleShowSectores = () => {
     setShowSectoresPanel(true);
     setShowUsersPanel(false);
     setShowRolesPanel(false);
+    setShowStatsPanel(false);
   };
 
   const handleShowRoles = () => {

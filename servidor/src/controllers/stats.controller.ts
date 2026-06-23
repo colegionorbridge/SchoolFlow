@@ -3,7 +3,7 @@ import { sequelize, Ticket, User } from '../models/models.js';
 
 export const getResumen = async (_req: Request, res: Response) => {
   try {
-    const [data] = await sequelize.query(`
+    const data = await sequelize.query(`
       SELECT
         COUNT(*)::int AS "totalTickets",
         COUNT(*) FILTER (WHERE estado = 'abierto')::int AS "abiertos",
@@ -13,7 +13,7 @@ export const getResumen = async (_req: Request, res: Response) => {
         (SELECT COUNT(*)::int FROM usuarios WHERE "registroCompleto" = true) AS "usuariosRegistrados"
       FROM tickets
     `);
-    res.json(data);
+    res.json(data[0]);
   } catch (error) {
     console.error('Error en getResumen:', error);
     res.status(500).json({ error: 'Error al obtener resumen' });
