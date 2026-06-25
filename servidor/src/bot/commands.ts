@@ -234,7 +234,7 @@ ${notasTexto}`
     // Comando: /cerrar [id] o cerrar ticket [id] (con o sin /)
     // Enfoque simple: si contiene "cerrar", extraer el número
     let ticketId = 0;
-    if (texto.toLowerCase().includes('cerrar')) {
+    if (texto.toLowerCase().includes('cerrar') || texto.toLowerCase().includes('cancelar')) {
         const numeros = texto.match(/\d+/g);
         if (numeros && numeros.length > 0) {
             // El último número debería ser el ID del ticket
@@ -298,7 +298,7 @@ ${notasTexto}`
 
     // Patron: detectar referencia a ticket + comentario directo
     // Ejemplos: "ticket #5 comentario", "el 5 sigue roto", "agrega al ticket 3 que..."
-    const matchTicket = texto.match(/(?:ticket\s*#?|ticket|#)(\d+)\s*[,\-:]?\s*(.+)/i);
+    const matchTicket = texto.match(/(?:ticket\s*#?|ticket|#)(\d+)\s*[,\-:]?\s*(.*)/i);
     if (matchTicket) {
         const ticketId = parseInt(matchTicket[1], 10);
         const resto = matchTicket[2].trim();
