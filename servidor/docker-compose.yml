@@ -1,9 +1,31 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: bot-norbridge-db
+    restart: always
+    environment:
+      POSTGRES_USER: norbridge
+      POSTGRES_PASSWORD: norbridge
+      POSTGRES_DB: norbridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U norbridge -d norbridge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   chatbot:
     build: .
     container_name: bot-norbridge-server
     restart: always
-    # El usuario 1000 es el estándar de la imagen de Node y suele coincidir con tu usuario tic
     user: "1000:1000" 
     privileged: true
     ports:
@@ -11,7 +33,12 @@ services:
     volumes:
       - ./.wwebjs_auth:/app/.wwebjs_auth
       - ./.env:/app/.env
+    environment:
+      - DATABASE_URL=postgresql://norbridge:norbridge@db:5432/norbridge
     shm_size: '2gb'
+    depends_on:
+      db:
+        condition: service_healthy
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -20,3 +47,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  pgdata:
