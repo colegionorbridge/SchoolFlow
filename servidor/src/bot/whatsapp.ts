@@ -60,6 +60,18 @@ client.on('qr', () => { conectado = true; });
 client.on('ready', () => { conectado = true; });
 
 client.on('message', async (msg) => {
+    const replyOriginal = msg.reply.bind(msg);
+    msg.reply = async (content: any) => {
+        try {
+            const chat = await msg.getChat();
+            await chat.sendStateTyping();
+            await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000));
+        } catch (e) {
+            // Si falla la simulación de escritura, responde igual
+        }
+        return replyOriginal(content);
+    };
+
     console.log(`📩 Mensaje de ${msg.from}: ${msg.body}`);
     await handleIncomingMessage(msg);
 });
