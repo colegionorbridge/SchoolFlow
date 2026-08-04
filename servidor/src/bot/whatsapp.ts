@@ -76,9 +76,13 @@ client.on('message', async (msg: any) => {
     const telefono = (String(msg.from).split('@')[0] ?? '').replace(/[^\d]/g, '');
     const replyOriginal = msg.reply.bind(msg) as Function;
     msg.reply = async (content: any) => {
+        const chatId = String(msg.from);
         try {
-            const chat = await msg.getChat();
-            await chat.sendStateTyping();
+            await (client as any).pupPage.evaluate(async (id: string) => {
+                const WidFactory = window.require('WAWebWidFactory');
+                const ChatState = window.require('WAWebChatStateBridge');
+                await ChatState.sendChatStateComposing(WidFactory.createWid(id));
+            }, chatId);
             const texto = typeof content === 'string' ? content : String(content || '');
             const typingDelay = 1500 + texto.length * 12 + Math.random() * 2000;
             await new Promise(r => setTimeout(r, typingDelay));
