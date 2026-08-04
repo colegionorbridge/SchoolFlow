@@ -59,16 +59,36 @@ setTimeout(() => {
 client.on('qr', () => { conectado = true; });
 client.on('ready', () => { conectado = true; });
 
-client.on('message', async (msg) => {
-    const replyOriginal = msg.reply.bind(msg);
+const lastSend = new Map<string, number>();
+const RATE_LIMIT_MS = 2000;
+
+function rateLimitar(telefono: string): Promise<void> {
+    const now = Date.now();
+    const ultimo = lastSend.get(telefono) || 0;
+    const espera = RATE_LIMIT_MS - (now - ultimo);
+    if (espera > 0) {
+        return new Promise(r => setTimeout(r, espera));
+    }
+    return Promise.resolve();
+}
+
+client.on('message', async (msg: any) => {
+    const telefono = (String(msg.from).split('@')[0] ?? '').replace(/[^\d]/g, '');
+    const replyOriginal = msg.reply.bind(msg) as Function;
     msg.reply = async (content: any) => {
         try {
             const chat = await msg.getChat();
             await chat.sendStateTyping();
-            await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000));
-        } catch (e) {
-            // Si falla la simulación de escritura, responde igual
+            const texto = typeof content === 'string' ? content : String(content || '');
+            const typingDelay = 1500 + texto.length * 12 + Math.random() * 2000;
+            await new Promise(r => setTimeout(r, typingDelay));
+        } catch (e: any) {
+            console.warn('⚠️ [Typing] Error al simular escritura:', e?.message || e);
+            const fallbackDelay = 1500 + Math.random() * 2000;
+            await new Promise(r => setTimeout(r, fallbackDelay));
         }
+        await rateLimitar(telefono);
+        lastSend.set(telefono, Date.now());
         return replyOriginal(content);
     };
 
