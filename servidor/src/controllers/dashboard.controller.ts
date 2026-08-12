@@ -319,44 +319,47 @@ export const updateTicket = async (req: Request, res: Response) => {
         await ticket.save();
 
         // 3. --- LÓGICA DE NOTIFICACIONES POR WHATSAPP ---
-        const chatId = ticket.userTelefono.includes('@c.us') 
-            ? ticket.userTelefono 
-            : `${ticket.userTelefono}@c.us`;
+        // Los tickets manuales no tienen userTelefono (null), no se envía notificación
+        if (ticket.userTelefono) {
+          const chatId = ticket.userTelefono.includes('@c.us') 
+              ? ticket.userTelefono 
+              : `${ticket.userTelefono}@c.us`;
 
-        console.log('📱 [Notificacion] chatId:', chatId, '| nuevaNota:', nuevaNota, '| estado:', estado, '| estadoAnterior:', estadoAnterior);
+          console.log('📱 [Notificacion] chatId:', chatId, '| nuevaNota:', nuevaNota, '| estado:', estado, '| estadoAnterior:', estadoAnterior);
 
-        // Caso A: Se agrego una nota/comentario (independientemente del cambio de estado)
-        if (nuevaNota && nuevaNota.trim() !== '') {
-            const msjNota = `📋 El tecnico *Alejandro* agrego un comentario a tu ticket *#${ticket.id}*: "${ticket.asunto}"\n\n💬 _"${nuevaNota.trim()}"_`;
-            console.log('📨 [Notificacion] Enviando mensaje de nota:', msjNota);
-            try {
-                await client.sendMessage(chatId, msjNota);
-                console.log('✅ [Notificacion] Mensaje de nota enviado correctamente');
-            } catch (e) {
-                console.error('❌ [Notificacion] Error enviando nota:', e);
-            }
-        }
+          // Caso A: Se agrego una nota/comentario (independientemente del cambio de estado)
+          if (nuevaNota && nuevaNota.trim() !== '') {
+              const msjNota = `📋 El tecnico *Alejandro* agrego un comentario a tu ticket *#${ticket.id}*: "${ticket.asunto}"\n\n💬 _"${nuevaNota.trim()}"_`;
+              console.log('📨 [Notificacion] Enviando mensaje de nota:', msjNota);
+              try {
+                  await client.sendMessage(chatId, msjNota);
+                  console.log('✅ [Notificacion] Mensaje de nota enviado correctamente');
+              } catch (e) {
+                  console.error('❌ [Notificacion] Error enviando nota:', e);
+              }
+          }
 
-        // Caso B: Pasa a En Proceso
-        if (estado === 'en_proceso' && estadoAnterior !== 'en_proceso') {
-            const msjProceso = `Hola! Te informamos que tu ticket *#${ticket.id}* ("${ticket.asunto}") ya esta *en proceso de reparacion*.`;
-            try {
-                await client.sendMessage(chatId, msjProceso);
-                console.log('✅ [Notificacion] Mensaje de en_proceso enviado correctamente');
-            } catch (e) {
-                console.error('❌ [Notificacion] Error enviando en_proceso:', e);
-            }
-        } 
-        
-        // Caso C: Se cierra el Ticket
-        if (estado === 'cerrado' && estadoAnterior !== 'cerrado') {
-            const msjCierre = `✅ Tu ticket *#${ticket.id}* ("${ticket.asunto}") ha sido *finalizado*. \n\nSi el problema persiste, podes abrir uno nuevo. Gracias!`;
-            try {
-                await client.sendMessage(chatId, msjCierre);
-                console.log('✅ [Notificacion] Mensaje de cierre enviado correctamente');
-            } catch (e) {
-                console.error('❌ [Notificacion] Error enviando cierre:', e);
-            }
+          // Caso B: Pasa a En Proceso
+          if (estado === 'en_proceso' && estadoAnterior !== 'en_proceso') {
+              const msjProceso = `Hola! Te informamos que tu ticket *#${ticket.id}* ("${ticket.asunto}") ya esta *en proceso de reparacion*.`;
+              try {
+                  await client.sendMessage(chatId, msjProceso);
+                  console.log('✅ [Notificacion] Mensaje de en_proceso enviado correctamente');
+              } catch (e) {
+                  console.error('❌ [Notificacion] Error enviando en_proceso:', e);
+              }
+          } 
+          
+          // Caso C: Se cierra el Ticket
+          if (estado === 'cerrado' && estadoAnterior !== 'cerrado') {
+              const msjCierre = `✅ Tu ticket *#${ticket.id}* ("${ticket.asunto}") ha sido *finalizado*. \n\nSi el problema persiste, podes abrir uno nuevo. Gracias!`;
+              try {
+                  await client.sendMessage(chatId, msjCierre);
+                  console.log('✅ [Notificacion] Mensaje de cierre enviado correctamente');
+              } catch (e) {
+                  console.error('❌ [Notificacion] Error enviando cierre:', e);
+              }
+          }
         }
 
         // 4. Buscamos el ticket completo para sincronizar el Dashboard

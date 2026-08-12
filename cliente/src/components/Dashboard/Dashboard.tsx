@@ -351,8 +351,8 @@ const Dashboard: React.FC = () => {
                   >
                     <td># {ticket.id}</td>
                     <td>
-                      <strong>{ticket.autor?.nombreCompleto || 'Desconocido'}</strong><br />
-                      <small>{ticket.userTelefono}</small>
+                      <strong>{ticket.origen === 'manual' ? 'ADMIN' : (ticket.autor?.nombreCompleto || 'Desconocido')}</strong><br />
+                      <small>{ticket.origen === 'manual' ? 'Carga manual' : ticket.userTelefono}</small>
                     </td>
                     <td>
                       <strong>{ticket.asunto}</strong>

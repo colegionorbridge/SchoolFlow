@@ -42,8 +42,8 @@ const TicketModal: React.FC<TicketModalProps> = ({ ticket, onClose, onUpdate }) 
           <section className={styles.infoGrid}>
             <div>
               <label>Solicitante</label>
-              <p>{ticket.autor?.nombreCompleto || 'Desconocido'}</p>
-              <small>{ticket.userTelefono}</small>
+              <p>{ticket.origen === 'manual' ? 'ADMIN' : (ticket.autor?.nombreCompleto || 'Desconocido')}</p>
+              <small>{ticket.origen === 'manual' ? 'Carga manual' : ticket.userTelefono}</small>
             </div>
             <div>
               <label>Ubicación</label>
