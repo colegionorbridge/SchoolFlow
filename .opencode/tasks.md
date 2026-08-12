@@ -99,3 +99,68 @@ msg.reply(content)
 - Express 5 + Socket.IO + PostgreSQL
 - React 19 dashboard en `cliente/`
 - Docker Compose con Chrome headless
+
+---
+
+## Backlog — Análisis IA de tickets por periodo (investigado, SIN implementar)
+
+### Idea
+
+Que la IA (Groq ya configurado) genere, a pedido del usuario/admin, un **análisis de los tickets en un rango de fechas dado**: qué tipo de reparaciones fueron más pedidas, qué sectores, tendencias y recomendaciones. Sirve para armar reportes de gestión.
+
+### Investigación — qué usan los sistemas profesionales
+
+| Sistema | Enfoque de análisis |
+|---------|---------------------|
+| **Zendesk Explore + Copilot** | Dashboards de KPIs + IA con "next best actions" y recomendaciones |
+| **Freshdesk Analytics** | Reportes de categorías, SLA, tendencias por periodo |
+| **Jira Service Management** | Dashboards + Assets + KB |
+| **Tendencia actual (todos)** | **Analytics conversacional**: preguntar en lenguaje natural sobre los datos |
+
+**Patrón común que todos adoptaron:** los números los calcula SQL (fuente de verdad), la IA solo interpreta, redacta y recomienda. Nunca se deja que el LLM invente cifras — se le dan los agregados exactos y se le pide el análisis narrativo.
+
+### Decisiones tomadas (confirmadas por el usuario)
+
+| Decisión | Opción elegida |
+|----------|----------------|
+| Canal | **Botón en el dashboard web** (no WhatsApp) |
+| Categorización de "tipo de reparación" | **IA clasifica al vuelo** los asuntos (sin agregar campo a la DB) |
+| Acceso | **Solo admin** |
+
+### Arquitectura propuesta
+
+1. Botón "Análisis IA" en el dashboard (panel Estadísticas o sección propia)
+2. Input de rango de fechas (desde/hasta, o presets: "último mes", "último trimestre")
+3. `POST /api/stats/analisis` con `{ fechaDesde, fechaHasta }`:
+   - SQL agrega los números del periodo: total, por estado, por sector, por ubicación, top usuarios, manuales vs whatsapp, tiempo promedio de resolución
+   - El LLM clasifica los `asunto` del periodo en categorías (proyector, wifi, PC, impresora...)
+   - Groq recibe el JSON de agregados + categorías y devuelve: resumen ejecutivo, top reparaciones, sectores con más demanda, recomendaciones accionables
+4. El dashboard muestra el informe (markdown/lista) en pantalla
+
+### El gap real
+
+El `asunto` es texto libre ("no anda el proyector"). No existe campo `categoria`. La IA lo clasifica al vuelo en el análisis (decisión tomada), con margen de error aceptable.
+
+### Datos disponibles hoy
+
+- `Ticket`: asunto, descripcion, ubicacion, estado (abierto/en_proceso/cerrado), prioridad (baja/media/alta), historial, origen (whatsapp/manual), userTelefono (nullable), createdAt, updatedAt
+- `User`: telefono, nombreCompleto, esAdmin, roleId, sectores (M:N)
+- Endpoints stats existentes: `/api/stats/resumen`, `/api/stats/por-sector`, `/api/stats/por-mes`, `/api/stats/usuarios-top`
+- Groq: `servidor/src/bot/groq.ts` (modelo `llama-3.3-70b-versatile`, JSON mode)
+
+### Archivos que se tocarían
+
+| Capa | Archivo |
+|------|---------|
+| Controller | `servidor/src/controllers/stats.controller.ts` (nuevo `getAnalisisIA`) |
+| Ruta | `servidor/src/routes/stats.routes.ts` (`POST /stats/analisis`) |
+| IA | `servidor/src/bot/groq.ts` (nueva función de análisis, reutilizar cliente Groq) |
+| Frontend | `cliente/src/components/Dashboard/StatsPanel.tsx` (botón + modal de resultado) |
+| CSS | `cliente/src/components/Dashboard/StatsPanel.module.css` |
+
+### Riesgos / consideraciones
+
+- **Alucinación de números**: mitigar dando siempre los agregados SQL como contexto exacto, la IA solo redacta.
+- **Tokens**: no mandar todos los tickets, solo asuntos + agregados.
+- **Clasificación al vuelo**: margen de error en categorías; aceptable para reportes internos.
+- **Auth admin**: validar `esAdmin` del JWT en el endpoint (hoy el middleware solo valida token).
