@@ -228,6 +228,43 @@ export const getTickets = async (_req: Request, res: Response) => {
   }
 };
 
+export const createTicket = async (req: Request, res: Response) => {
+  try {
+    const { asunto, descripcion, ubicacion, prioridad } = req.body;
+
+    if (!asunto || !descripcion || !ubicacion) {
+      return res.status(400).json({ error: 'asunto, descripcion y ubicacion son requeridos' });
+    }
+
+    const ticket = await Ticket.create({
+      asunto,
+      descripcion,
+      ubicacion,
+      prioridad: prioridad || 'media',
+      origen: 'manual',
+      userTelefono: undefined as any,
+      historial: [{
+        fecha: new Date().toLocaleString('es-AR'),
+        autor: 'Alejandro (Soporte IT)',
+        nota: 'Ticket creado manualmente desde el panel'
+      }]
+    });
+
+    const ticketCreado = await Ticket.findByPk(ticket.id, {
+      include: [{ model: User, as: 'autor', attributes: ['nombreCompleto', 'telefono'] }]
+    });
+
+    if (io && ticketCreado) {
+      io.emit('nuevo-ticket', ticketCreado);
+    }
+
+    res.status(201).json(ticketCreado);
+  } catch (error) {
+    console.error('❌ Error al crear ticket manual:', error);
+    res.status(500).json({ error: 'Error al crear ticket' });
+  }
+};
+
 export const getUsuarios = async (_req: Request, res: Response) => {
   try {
     const usuarios = await User.findAll({

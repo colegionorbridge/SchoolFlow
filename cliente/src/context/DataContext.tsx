@@ -9,7 +9,8 @@ interface Ticket {
   ubicacion: string;
   estado: 'abierto' | 'en_proceso' | 'cerrado';
   prioridad: 'baja' | 'media' | 'alta';
-  userTelefono: string;
+  origen: 'whatsapp' | 'manual';
+  userTelefono: string | null;
   createdAt: string;
   historial?: any[];
   autor?: {
@@ -59,6 +60,7 @@ interface DataContextType {
   loading: boolean;
   cargarDatosIniciales: () => Promise<void>;
   actualizarUsuario: (telefono: string, datos: any) => Promise<void>;
+  crearTicketManual: (datos: { asunto: string; descripcion: string; ubicacion: string; prioridad?: string }) => Promise<Ticket | null>;
   cargarRoles: () => Promise<void>;
   cargarSectores: () => Promise<void>;
   crearSector: (datos: any) => Promise<void>;
@@ -393,10 +395,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const crearTicketManual = async (datos: { asunto: string; descripcion: string; ubicacion: string; prioridad?: string }) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/tickets`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(datos)
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al crear ticket');
+      }
+      
+      const ticketCreado = await res.json();
+      return ticketCreado as Ticket;
+    } catch (error) {
+      console.error("Error al crear ticket manual:", error);
+      throw error;
+    }
+  };
+
   return (
     <DataContext.Provider value={{ 
       tickets, usuarios, roles, sectores, loading, 
-      cargarDatosIniciales, actualizarUsuario, 
+      cargarDatosIniciales, actualizarUsuario, crearTicketManual,
       cargarRoles, cargarSectores, 
       crearSector, actualizarSector, eliminarSector,
       crearRol, actualizarRol, eliminarRol

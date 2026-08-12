@@ -9,6 +9,7 @@ export class Ticket extends Model<InferAttributes<Ticket>, InferCreationAttribut
   declare ubicacion: string;
   declare estado: CreationOptional<'abierto' | 'en_proceso' | 'cerrado'>;
   declare prioridad: CreationOptional<'baja' | 'media' | 'alta'>;
+  declare origen: CreationOptional<'whatsapp' | 'manual'>;
   declare userTelefono: string;
   
   // Campo para guardar comentarios, notas de Alejandro o logs del bot
@@ -46,9 +47,14 @@ Ticket.init({
     type: DataTypes.ENUM('baja', 'media', 'alta'),
     defaultValue: 'media',
   },
+  origen: {
+    type: DataTypes.ENUM('whatsapp', 'manual'),
+    defaultValue: 'whatsapp',
+  },
   userTelefono: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
+    comment: 'FK a usuarios.telefono. NULL para tickets manuales.',
   },
   historial: {
     type: DataTypes.JSON,

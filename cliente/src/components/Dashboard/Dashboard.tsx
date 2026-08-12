@@ -16,7 +16,7 @@ type SortConfig = {
 } | null;
 
 const Dashboard: React.FC = () => {
-  const { tickets, usuarios, loading, cargarDatosIniciales, cargarRoles, cargarSectores } = useData();
+  const { tickets, usuarios, loading, cargarDatosIniciales, cargarRoles, cargarSectores, crearTicketManual } = useData();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id', direction: 'desc' });
   
   // ESTADO PARA EL MODAL DE TICKET
@@ -36,6 +36,11 @@ const Dashboard: React.FC = () => {
 
   // ESTADO PARA MOSTRAR PANEL DE ESTADÍSTICAS
   const [showStatsPanel, setShowStatsPanel] = useState(false);
+
+  // ESTADO PARA MODAL DE NUEVO TICKET MANUAL
+  const [showNewTicketModal, setShowNewTicketModal] = useState(false);
+  const [newTicket, setNewTicket] = useState({ asunto: '', descripcion: '', ubicacion: '', prioridad: 'media' });
+  const [savingTicket, setSavingTicket] = useState(false);
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -81,6 +86,22 @@ const Dashboard: React.FC = () => {
     setShowSectoresPanel(false);
     setShowRolesPanel(false);
     setShowStatsPanel(false);
+  };
+
+  // Función para crear ticket manual
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTicket.asunto.trim() || !newTicket.descripcion.trim() || !newTicket.ubicacion.trim()) return;
+    setSavingTicket(true);
+    try {
+      await crearTicketManual(newTicket);
+      setShowNewTicketModal(false);
+      setNewTicket({ asunto: '', descripcion: '', ubicacion: '', prioridad: 'media' });
+    } catch {
+      alert('No se pudo crear el ticket.');
+    } finally {
+      setSavingTicket(false);
+    }
   };
 
   // Función para actualizar el ticket en el servidor
@@ -225,6 +246,12 @@ const Dashboard: React.FC = () => {
             Estadísticas
           </button>
           <button 
+            onClick={() => setShowNewTicketModal(true)}
+            className={styles.newTicketButton}
+          >
+            + Nuevo Ticket
+          </button>
+          <button 
             onClick={() => {
               localStorage.removeItem('token');
               window.location.href = '/login';
@@ -347,6 +374,9 @@ const Dashboard: React.FC = () => {
                       }}>
                         ● {ticket.estado.replace('_', ' ').toUpperCase()}
                       </span>
+                      {ticket.origen !== 'whatsapp' && (
+                        <span className={styles.manualBadge} title="Ticket creado manualmente">✍</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -369,6 +399,75 @@ const Dashboard: React.FC = () => {
           user={editingUser} 
           onClose={() => setEditingUser(null)} 
         />
+      )}
+
+      {/* MODAL NUEVO TICKET MANUAL */}
+      {showNewTicketModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowNewTicketModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>Nuevo Ticket Manual</h2>
+              <button onClick={() => setShowNewTicketModal(false)} className={styles.closeButton}>×</button>
+            </div>
+            <form onSubmit={handleCreateTicket} className={styles.form}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Asunto *</label>
+                <input
+                  type="text"
+                  className={styles.formInput}
+                  value={newTicket.asunto}
+                  onChange={(e) => setNewTicket({ ...newTicket, asunto: e.target.value })}
+                  placeholder="Ej: Cambio de toner en administración"
+                  required
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Descripción *</label>
+                <textarea
+                  className={styles.formTextarea}
+                  rows={4}
+                  value={newTicket.descripcion}
+                  onChange={(e) => setNewTicket({ ...newTicket, descripcion: e.target.value })}
+                  placeholder="Detallá el problema o la tarea realizada..."
+                  required
+                />
+              </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Ubicación *</label>
+                  <input
+                    type="text"
+                    className={styles.formInput}
+                    value={newTicket.ubicacion}
+                    onChange={(e) => setNewTicket({ ...newTicket, ubicacion: e.target.value })}
+                    placeholder="Ej: PRIMARIA - Aula 3A"
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Prioridad</label>
+                  <select
+                    className={styles.formSelect}
+                    value={newTicket.prioridad}
+                    onChange={(e) => setNewTicket({ ...newTicket, prioridad: e.target.value })}
+                  >
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.formActions}>
+                <button type="button" onClick={() => setShowNewTicketModal(false)} className={styles.cancelButton}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={savingTicket} className={styles.saveButton}>
+                  {savingTicket ? 'Creando...' : 'Crear Ticket'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import {
   getTickets,
   getUsuarios,
   updateTicket,
+  createTicket,
   updateUsuario,
   getRoles,
   createRole,
@@ -18,6 +19,7 @@ const router: Router = Router();
 
 // Tickets
 router.get('/tickets', getTickets);
+router.post('/tickets', createTicket);
 router.patch('/tickets/:id', updateTicket);
 
 // Usuarios
