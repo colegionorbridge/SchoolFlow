@@ -1,6 +1,32 @@
 # Tareas - bot-norbridge
 
-## 2026-08-04 — Fix typing simulation + rate limit + análisis de colas
+## 2026-08-12 — Tickets manuales desde dashboard
+
+### Feature
+
+Botón "+ Nuevo Ticket" en el dashboard para registrar tickets que ingresan por otros canales (email, teléfono, en persona) y llevar un reporte unificado de todo el trabajo de IT.
+
+### Cambios
+
+| Capa | Archivo | Cambio |
+|------|---------|--------|
+| Modelo | `servidor/src/models/Ticket.ts` | Nuevo campo `origen` (ENUM: 'whatsapp' \| 'manual', default 'whatsapp'). `userTelefono` ahora nullable (tickets manuales no tienen FK a usuario). |
+| Controller | `servidor/src/controllers/dashboard.controller.ts` | Nuevo `createTicket`: recibe asunto/descripcion/ubicacion/prioridad, crea con origen='manual' sin userTelefono, emite `nuevo-ticket` por Socket.IO, agrega nota en historial "Ticket creado manualmente desde el panel". |
+| Ruta | `servidor/src/routes/dashboard.routes.ts` | `POST /api/tickets` → `createTicket` |
+| Context | `cliente/src/context/DataContext.tsx` | Nueva función `crearTicketManual(datos)` + interface `Ticket` incluye `origen` |
+| Dashboard | `cliente/src/components/Dashboard/Dashboard.tsx` | Botón "+ Nuevo Ticket" en header, modal con formulario (asunto, descripción, ubicación, prioridad), badge ✍ en tickets manuales en la tabla |
+| CSS | `cliente/src/components/Dashboard/Dashboard.module.css` | Estilos `.newTicketButton`, `.manualBadge`, `.form`, `.formRow`, `.formLabel`, `.formInput`, `.formTextarea`, `.formSelect` |
+
+### Migración
+
+`sequelize.sync({ alter: true })` aplica la nueva columna automáticamente al reiniciar el servidor.
+
+### Visual en tabla
+
+- Tickets de WhatsApp: se muestran normales con nombre de usuario
+- Tickets manuales: badge ✍ al lado del estado, sin nombre de solicitante (userTelefono = NULL)
+
+---
 
 ### Diagnóstico
 
