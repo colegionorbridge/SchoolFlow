@@ -24,9 +24,28 @@ Botón "+ Nuevo Ticket" en el dashboard para registrar tickets que ingresan por 
 ### Visual en tabla
 
 - Tickets de WhatsApp: se muestran normales con nombre de usuario
-- Tickets manuales: badge ✍ al lado del estado, sin nombre de solicitante (userTelefono = NULL)
+- Tickets manuales: badge ✍ al lado del estado, solicitante "ADMIN / Carga manual" (userTelefono = NULL)
+
+### Fixes post-deploy
+
+| Commit | Fix |
+|--------|-----|
+| `9ca7d2b` | Badge ✍ solo cuando `origen === 'manual'` (antes `null` se mostraba como manual) |
+| `acaefa2` | `updateTicket` saltea notificaciones WhatsApp cuando `userTelefono` es null. Solicitante "ADMIN" en tabla y modal. |
+
+### Nota de deploy
+
+`sequelize.sync({ alter: true })` NO quitó la constraint `NOT NULL` de `userTelefono` en la DB existente. Se aplicó manualmente:
+
+```sql
+ALTER TABLE tickets ALTER COLUMN "userTelefono" DROP NOT NULL;
+```
+
+Si se recrea la DB desde cero, el modelo ya trae `allowNull: true`, no hace falta.
 
 ---
+
+## 2026-08-04 — Fix typing simulation + rate limit + análisis de colas
 
 ### Diagnóstico
 
