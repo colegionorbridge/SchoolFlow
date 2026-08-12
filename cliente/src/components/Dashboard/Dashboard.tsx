@@ -374,7 +374,7 @@ const Dashboard: React.FC = () => {
                       }}>
                         ● {ticket.estado.replace('_', ' ').toUpperCase()}
                       </span>
-                      {ticket.origen !== 'whatsapp' && (
+                      {ticket.origen === 'manual' && (
                         <span className={styles.manualBadge} title="Ticket creado manualmente">✍</span>
                       )}
                     </td>
