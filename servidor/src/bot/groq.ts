@@ -136,12 +136,11 @@ ${infoTickets}`;
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: "openai/gpt-oss-120b",
+                model: "qwen/qwen3.6-27b",
                 messages: messages,
                 temperature: 0.2,
                 response_format: { type: "json_object" },
-                reasoning_effort: "medium",
-                include_reasoning: false
+                reasoning_effort: "none"
             })
         });
 

@@ -42,6 +42,19 @@ También se agregó logging para capturar la respuesta cruda de Groq cuando `dat
 - Prompt reforzado: "SIEMPRE respondé ÚNICAMENTE JSON válido, incluso en saludos/cortesía → accion NINGUNA"
 - Se corrigió el **encoding roto** del prompt (mojibake `Ã©`, `Â¿`, `ðŸ`, `â¬` → acentos/emojis correctos)
 
+### Fix 3: loop multi-turno (reasoning model no apto)
+
+**Problema:** con GPT-OSS-120B (reasoning model) el bot se quedaba en loop pidiendo sector/ubicación una y otra vez, sin combinar la información del historial para crear el ticket. Con Llama 3.3 70B (no-reasoning) esto funcionaba perfecto.
+
+**Solución:** migrar a `qwen/qwen3.6-27b` con `reasoning_effort: "none"` (deshabilita razonamiento, se comporta como no-reasoning tipo Llama). Es la otra opción oficial recomendada por Groq. Sigue el JSON mode y el flujo multi-turno correctamente.
+
+```js
+model: "qwen/qwen3.6-27b",
+temperature: 0.2,
+response_format: { type: "json_object" },
+reasoning_effort: "none"
+```
+
 ---
 
 ## 2026-08-12 — Tickets manuales desde dashboard
