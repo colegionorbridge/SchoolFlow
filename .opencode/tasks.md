@@ -1,5 +1,23 @@
 # Tareas - bot-norbridge
 
+## 2026-08-13 — Migración de modelo IA (deprecación Groq)
+
+Groq anunció la deprecación de `llama-3.3-70b-versatile` (shutdown 16/08/26). Se migró al reemplazo recomendado.
+
+| Detalle | Valor |
+|---------|-------|
+| Archivo | `servidor/src/bot/groq.ts` |
+| Modelo anterior | `llama-3.3-70b-versatile` |
+| Modelo nuevo | `openai/gpt-oss-120b` |
+| Costo | $0 (tier gratuito de Groq, Free Plan) |
+| Función | `consultarGroq` (NLP completo: extraer asunto/descripcion/ubicacion/accion, JSON mode) |
+
+Sin cambios de endpoint ni API key. Se verificó `tsc` y se rebuildeó Docker (`docker compose cp` + `npm run build` + `restart`).
+
+> Nota: también deprecado `llama-3.1-8b-instant` (usado por bot-dgcatra), migrado a `openai/gpt-oss-20b`.
+
+---
+
 ## 2026-08-12 — Tickets manuales desde dashboard
 
 ### Feature
