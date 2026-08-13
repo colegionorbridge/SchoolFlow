@@ -16,6 +16,23 @@ Sin cambios de endpoint ni API key. Se verificó `tsc` y se rebuildeó Docker (`
 
 > Nota: también deprecado `llama-3.1-8b-instant` (usado por bot-dgcatra), migrado a `openai/gpt-oss-20b`.
 
+### Fix: rate limit por reasoning tokens
+
+**Problema:** los GPT-OSS son *reasoning models*. Generan cientos de tokens de razonamiento interno (~385 por respuesta), que consumen el límite del free tier (8K tokens/min) y causaban `Error en Groq: Cannot read properties of undefined (reading '0')` (respuesta de error sin `choices`). El bot no creaba tickets.
+
+**Solución:** se agregó `reasoning_effort: "low"` + `include_reasoning: false` al request. El reasoning bajó de ~385 a ~16 tokens.
+
+```json
+{
+  "model": "openai/gpt-oss-120b",
+  "response_format": { "type": "json_object" },
+  "reasoning_effort": "low",
+  "include_reasoning": false
+}
+```
+
+También se agregó logging para capturar la respuesta cruda de Groq cuando `data.choices` viene undefined.
+
 ---
 
 ## 2026-08-12 — Tickets manuales desde dashboard

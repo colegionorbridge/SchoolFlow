@@ -134,11 +134,17 @@ ${infoTickets}`;
                 model: "openai/gpt-oss-120b",
                 messages: messages,
                 temperature: 0.2,
-                response_format: { type: "json_object" }
+                response_format: { type: "json_object" },
+                reasoning_effort: "low",
+                include_reasoning: false
             })
         });
 
         const data = await response.json();
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            console.error('❌ Respuesta Groq inesperada (status ' + response.status + '):', JSON.stringify(data).slice(0, 600));
+            throw new Error('Groq error: ' + (data?.error?.message || JSON.stringify(data).slice(0, 200)));
+        }
         const resultado = JSON.parse(data.choices[0].message.content);
 
         // Inyectamos el telÃ©fono si estamos creando
