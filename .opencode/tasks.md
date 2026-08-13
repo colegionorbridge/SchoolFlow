@@ -33,6 +33,15 @@ Sin cambios de endpoint ni API key. Se verificó `tsc` y se rebuildeó Docker (`
 
 También se agregó logging para capturar la respuesta cruda de Groq cuando `data.choices` viene undefined.
 
+### Fix 2: json_validate_failed (respuesta no JSON)
+
+**Problema:** con `reasoning_effort: "low"` el modelo no seguía el formato JSON (respondía texto conversacional) → Groq rechazaba con `json_validate_failed` y el bot respondía "error interno".
+
+**Solución:**
+- `reasoning_effort: "low"` → `"medium"` (mejor adherencia al JSON)
+- Prompt reforzado: "SIEMPRE respondé ÚNICAMENTE JSON válido, incluso en saludos/cortesía → accion NINGUNA"
+- Se corrigió el **encoding roto** del prompt (mojibake `Ã©`, `Â¿`, `ðŸ`, `â¬` → acentos/emojis correctos)
+
 ---
 
 ## 2026-08-12 — Tickets manuales desde dashboard
