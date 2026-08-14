@@ -28,48 +28,62 @@ interface RespuestaIA {
 // Tiempo máximo de bloqueo "procesando" (2 minutos)
 const TIMEOUT_PROCESANDO = 2 * 60 * 1000;
 const TIMEOUT_PENDIENTE = 10 * 60 * 1000; // 10 minutos
+const TIMEOUT_INACTIVIDAD = 60 * 60 * 1000; // 1 hora sin actividad
 
-// Verificador periódico de pendientes vencidos (recuperación ante reinicios y conexión DB caída)
+// Verificador periódico: limpia pendientes vencidos y reinicia contexto por inactividad.
+// Recupera ante reinicios, conexión DB caída y pendientes legacy sin timestamp.
 async function verificarPendientesVencidos() {
     try {
         const usuarios = await User.findAll();
         const ahora = Date.now();
 
         for (const user of usuarios) {
-            const pendiente = user.context?.pendienteConfirmacion;
-            if (!pendiente || !pendiente.timestamp) continue;
+            const context = user.context || {};
+            const pendiente = context.pendienteConfirmacion;
+            const ultimaActividad = user.updatedAt ? new Date(user.updatedAt).getTime() : 0;
+            const inactivo = ahora - ultimaActividad > TIMEOUT_INACTIVIDAD;
 
-            if (ahora - pendiente.timestamp > TIMEOUT_PENDIENTE) {
-                console.log(`⏱️ [Verificador] pendienteConfirmacion expirado para ${user.telefono}`);
+            // Pendiente vencido: timestamp viejo (>10min) o sin timestamp (dato legacy)
+            const pendienteVencido = pendiente
+                ? (pendiente.timestamp ? ahora - pendiente.timestamp > TIMEOUT_PENDIENTE : true)
+                : false;
 
-                if (!clientReady()) {
-                    console.log(`⏱️ [Verificador] Cliente no listo aún, se reintentará en el próximo ciclo para ${user.telefono}`);
-                    continue;
-                }
+            const hayContextoResidual = (context.historialConversacion?.length || 0) > 0 || context.procesando === true;
 
+            if (!pendienteVencido && !(inactivo && hayContextoResidual)) continue;
+
+            console.log(`⏱️ [Verificador] Limpiando contexto para ${user.telefono} (pendienteVencido=${pendienteVencido}, inactivo=${inactivo})`);
+
+            // Avisar solo si un pendiente venció (no por inactividad silenciosa)
+            if (pendienteVencido && clientReady()) {
                 try {
                     const chatId = `${user.telefono}@c.us`;
-                    await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
-                    console.log(`⏱️ [Verificador] Mensaje enviado a ${user.telefono}`);
+                    await client.sendMessage(chatId, '⏱️ Pasó el tiempo de espera. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                 } catch (e) {
-                    console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono} (se reintentará):`, e);
-                    continue;
+                    console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono}:`, e);
                 }
+            }
 
-                const historial = user.context?.historialConversacion || [];
-                const nuevoHistorial = [
+            const historial = context.historialConversacion || [];
+            let nuevoHistorial = historial;
+            if (inactivo) {
+                // Usuario volvió después de mucho tiempo: reiniciar conversación desde cero
+                nuevoHistorial = [];
+            } else if (pendienteVencido) {
+                nuevoHistorial = [
                     ...historial,
                     { role: 'assistant', content: 'Se canceló una acción pendiente por tiempo de espera.' }
                 ].slice(-10);
-
-                user.context = {
-                    ...(user.context || {}),
-                    pendienteConfirmacion: null,
-                    historialConversacion: nuevoHistorial
-                };
-                user.changed('context', true);
-                await user.save();
             }
+
+            user.context = {
+                ...context,
+                pendienteConfirmacion: null,
+                procesando: false,
+                historialConversacion: nuevoHistorial
+            };
+            user.changed('context', true);
+            await user.save();
         }
     } catch (e) {
         console.error('❌ [Verificador] Error general:', e);
@@ -147,8 +161,9 @@ export const handleIncomingMessage = async (msg: any) => {
         // 2. Verificar si hay confirmacion pendiente y el usuario responde
         const pendienteConfirmacion = user.context?.pendienteConfirmacion;
         if (pendienteConfirmacion) {
-            // Si expiró, limpiar automáticamente
-            if (pendienteConfirmacion.timestamp && Date.now() - pendienteConfirmacion.timestamp > TIMEOUT_PENDIENTE) {
+            // Si expiró (o no tiene timestamp = dato legacy), limpiar automáticamente
+            const pendienteExpirado = !pendienteConfirmacion.timestamp || Date.now() - pendienteConfirmacion.timestamp > TIMEOUT_PENDIENTE;
+            if (pendienteExpirado) {
                 const historialActual = user.context?.historialConversacion || [];
                 const nuevoHistorial = [
                     ...historialActual,

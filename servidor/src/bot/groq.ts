@@ -129,8 +129,12 @@ ${infoTickets}`;
             { role: "user", content: mensajeUsuario }
         ];
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+
         const response = await fetch(url, {
             method: 'POST',
+            signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
@@ -144,6 +148,7 @@ ${infoTickets}`;
             })
         });
 
+        clearTimeout(timeout);
         const data = await response.json();
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
             console.error('❌ Respuesta Groq inesperada (status ' + response.status + '):', JSON.stringify(data).slice(0, 600));

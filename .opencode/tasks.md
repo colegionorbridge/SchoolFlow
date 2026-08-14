@@ -1,5 +1,31 @@
 # Tareas - bot-norbridge
 
+## 2026-08-14 — Fix pendientes colgados + limpiador de contexto
+
+### Problema
+
+Un usuario (Marcela Medina) tenía un `pendienteConfirmacion` colgado desde **mayo 2026** (3 meses). El pendiente no tenía campo `timestamp` (dato legacy de una versión vieja del código), por lo que el verificador nunca lo detectaba como vencido (`ahora - undefined = NaN`, y `NaN > 10min` es `false`).
+
+### Fixes aplicados
+
+| Archivo | Cambio |
+|---------|--------|
+| `servidor/src/bot/handler.ts` | `verificarPendientesVencidos()`: maneja pendiente sin `timestamp` (lo considera vencido). Agrega `TIMEOUT_INACTIVIDAD = 1h` y limpia `historialConversacion` + `pendienteConfirmacion` + `procesando` cuando el usuario lleva más de 1h sin hablar. |
+| `servidor/src/bot/handler.ts` | En `handleIncomingMessage`: quitar guard `timestamp &&` — un pendiente sin timestamp se trata como expirado. |
+| `servidor/src/bot/groq.ts` | Agregar `AbortController` con timeout de 20s al fetch de Groq (antes podía colgarse y dejar `procesando: true` bloqueando al bot). |
+
+### Limpieza de datos
+
+`UPDATE` en la DB: se limpió el `pendienteConfirmacion` y `historialConversacion` de `5491131652363` (Marcela Medina), dejando `pendienteConfirmacion: null` y `historialConversacion: []`.
+
+### Resultado
+
+El verificador periódico (cada 30s) ahora:
+1. Limpia pendientes vencidos (timestamp viejo o faltante).
+2. Reinicia la conversación de usuarios inactivos > 1h.
+
+---
+
 ## 2026-08-13 — Migración de modelo IA (deprecación Groq)
 
 Groq anunció la deprecación de `llama-3.3-70b-versatile` (shutdown 16/08/26). Se migró al reemplazo recomendado.
