@@ -1,11 +1,20 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { config } from '../config/index.js';
 import { logger } from '../config/logger.js';
 
 const router = Router();
 
-router.post('/login', async (req: any, res: any) => {
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Intentá de nuevo en 5 minutos.' },
+});
+
+router.post('/login', loginLimiter, async (req: any, res: any) => {
   try {
     const { password } = req.body;
 
