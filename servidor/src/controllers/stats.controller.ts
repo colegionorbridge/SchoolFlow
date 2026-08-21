@@ -1,6 +1,7 @@
 import { type Request, type Response } from 'express';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../models/models.js';
+import { logger } from '../config/logger.js';
 
 export const getResumen = async (_req: Request, res: Response) => {
   try {
@@ -16,7 +17,7 @@ export const getResumen = async (_req: Request, res: Response) => {
     `, { type: QueryTypes.SELECT });
     res.json(data[0]);
   } catch (error) {
-    console.error('Error en getResumen:', error);
+    logger.error({ err: error }, 'Error en getResumen:');
     res.status(500).json({ error: 'Error al obtener resumen' });
   }
 };
@@ -44,7 +45,7 @@ export const getPorSector = async (_req: Request, res: Response) => {
     `, { type: QueryTypes.SELECT });
     res.json(data);
   } catch (error) {
-    console.error('Error en getPorSector:', error);
+    logger.error({ err: error }, 'Error en getPorSector:');
     res.status(500).json({ error: 'Error al obtener tickets por sector' });
   }
 };
@@ -62,7 +63,7 @@ export const getPorMes = async (_req: Request, res: Response) => {
     `, { type: QueryTypes.SELECT });
     res.json(data);
   } catch (error) {
-    console.error('Error en getPorMes:', error);
+    logger.error({ err: error }, 'Error en getPorMes:');
     res.status(500).json({ error: 'Error al obtener tickets por mes' });
   }
 };
@@ -91,7 +92,7 @@ export const getUsuariosTop = async (_req: Request, res: Response) => {
     `, { type: QueryTypes.SELECT });
     res.json(data);
   } catch (error) {
-    console.error('Error en getUsuariosTop:', error);
+    logger.error({ err: error }, 'Error en getUsuariosTop:');
     res.status(500).json({ error: 'Error al obtener top usuarios' });
   }
 };

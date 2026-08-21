@@ -1,7 +1,8 @@
 import { Op } from 'sequelize';
 import { User, Sector, Ticket, Role } from '../models/models.js';
 import { ejecutarAccion } from './actions.js';
-import { io } from '../socket/server.js';
+import { getIO } from '../socket/server.js';
+import { logger } from '../config/logger.js';
 
 /**
  * SISTEMA DE COMMANDS DIRECTOS (SIN IA)
@@ -239,7 +240,7 @@ ${notasTexto}`
         if (numeros && numeros.length > 0) {
             // El último número debería ser el ID del ticket
             ticketId = parseInt(numeros[numeros.length - 1], 10);
-            console.log(`🔍 [Cerrar] Texto: "${texto}" | Números encontrados: ${JSON.stringify(numeros)} | ID: ${ticketId}`);
+            logger.info(`🔍 [Cerrar] Texto: "${texto}" | Números encontrados: ${JSON.stringify(numeros)} | ID: ${ticketId}`);
         }
     }
     
@@ -277,7 +278,7 @@ ${notasTexto}`
         const ticketActualizado = await Ticket.findByPk(ticket.id, {
             include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
         });
-        if (io) io.emit('ticket-actualizado', ticketActualizado);
+        if (getIO()) getIO()?.emit('ticket-actualizado', ticketActualizado);
 
         return {
             handled: true,
@@ -373,11 +374,11 @@ ${notasTexto}`
         ticket.changed('historial', true);
         await ticket.save();
 
-        if (io) {
+        if (getIO()) {
             const ticketActualizado = await Ticket.findByPk(ticket.id, {
                 include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
             });
-            io.emit('ticket-actualizado', ticketActualizado);
+            getIO()?.emit('ticket-actualizado', ticketActualizado);
         }
 
         return {

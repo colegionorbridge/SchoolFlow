@@ -55,6 +55,8 @@ export default function App() {
 
     // Solo conectar si está autenticado y no está conectado
     if (isAuth && !socket.connected) {
+      const token = localStorage.getItem('token');
+      socket.auth = { token };
       console.log('🔌 Conectando socket...');
       socket.connect();
     }

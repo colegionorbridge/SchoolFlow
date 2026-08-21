@@ -4,8 +4,9 @@ import { consultarGroq } from './groq.js';
 import { manejarRegistro } from './registro.js';
 import { processCommand } from './commands.js';
 import { ejecutarAccion } from './actions.js';
-import { io } from '../socket/server.js';
+import { getIO } from '../socket/server.js';
 import { client, clientReady } from './whatsapp.js';
+import { logger } from '../config/logger.js';
 
 // Escudo anti-duplicados: evita que reconexiones o re-emisiones
 // de whatsapp-web.js procesen el mismo mensaje dos veces.
@@ -52,7 +53,7 @@ async function verificarPendientesVencidos() {
 
             if (!pendienteVencido && !(inactivo && hayContextoResidual)) continue;
 
-            console.log(`⏱️ [Verificador] Limpiando contexto para ${user.telefono} (pendienteVencido=${pendienteVencido}, inactivo=${inactivo})`);
+            logger.info(`⏱️ [Verificador] Limpiando contexto para ${user.telefono} (pendienteVencido=${pendienteVencido}, inactivo=${inactivo})`);
 
             // Avisar solo si un pendiente venció (no por inactividad silenciosa)
             if (pendienteVencido && clientReady()) {
@@ -60,7 +61,7 @@ async function verificarPendientesVencidos() {
                     const chatId = `${user.telefono}@c.us`;
                     await client.sendMessage(chatId, '⏱️ Pasó el tiempo de espera. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                 } catch (e) {
-                    console.error(`❌ [Verificador] Error al enviar mensaje a ${user.telefono}:`, e);
+                    logger.error({ err: e }, `❌ [Verificador] Error al enviar mensaje a ${user.telefono}:`);
                 }
             }
 
@@ -86,14 +87,14 @@ async function verificarPendientesVencidos() {
             await user.save();
         }
     } catch (e) {
-        console.error('❌ [Verificador] Error general:', e);
+        logger.error({ err: e }, '❌ [Verificador] Error general:');
     }
 }
 
 export function iniciarVerificadorPendientes(intervaloMs: number = 30000) {
     verificarPendientesVencidos();
     setInterval(verificarPendientesVencidos, intervaloMs);
-    console.log(`⏱️ [Verificador] Iniciado — cada ${intervaloMs / 1000}s revisando pendientes vencidos`);
+    logger.info(`⏱️ [Verificador] Iniciado — cada ${intervaloMs / 1000}s revisando pendientes vencidos`);
 }
 
 export const handleIncomingMessage = async (msg: any) => {
@@ -101,7 +102,7 @@ export const handleIncomingMessage = async (msg: any) => {
     const msgId = msg.id?.id || msg.id?._serialized;
     if (msgId) {
         if (mensajesProcesados.has(msgId)) {
-            console.log(`🛡️ [Deduplicado] Mensaje ${msgId} ignorado (ya procesado).`);
+            logger.info(`🛡️ [Deduplicado] Mensaje ${msgId} ignorado (ya procesado).`);
             return;
         }
         mensajesProcesados.add(msgId);
@@ -145,7 +146,7 @@ export const handleIncomingMessage = async (msg: any) => {
                 user.context = { ...(user.context || {}), procesando: false };
                 user.changed('context', true);
                 await user.save();
-                console.log(`⏱️ [Timeout] Liberando flag procesando para ${telefono}`);
+                logger.info(`⏱️ [Timeout] Liberando flag procesando para ${telefono}`);
             } else {
                 return; // Sigue procesando, ignorar
             }
@@ -156,7 +157,7 @@ export const handleIncomingMessage = async (msg: any) => {
         user.changed('context', true);
         await user.save();
         
-        if (io) io.emit('usuario-actualizado', user);
+        if (getIO()) getIO()?.emit('usuario-actualizado', user);
 
         // 2. Verificar si hay confirmacion pendiente y el usuario responde
         const pendienteConfirmacion = user.context?.pendienteConfirmacion;
@@ -173,7 +174,7 @@ export const handleIncomingMessage = async (msg: any) => {
                 user.context = { ...(user.context || {}), pendienteConfirmacion: null, historialConversacion: nuevoHistorial };
                 user.changed('context', true);
                 await user.save();
-                console.log(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
+                logger.info(`⏱️ [Timeout] pendienteConfirmacion expirado para ${telefono}`);
                 await msg.reply('⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                 return;
             } else {
@@ -255,11 +256,11 @@ export const handleIncomingMessage = async (msg: any) => {
             user.context = { ...(user.context || {}), procesando: false, historialConversacion: nuevoHistorial };
             user.changed('context', true);
             await user.save();
-            if (io) {
+            if (getIO()) {
                 const userFinal = await User.findByPk(user.telefono, {
                     include: [{ model: Role, as: 'rol' }]
                 });
-                if (userFinal) io.emit('usuario-actualizado', userFinal);
+                if (userFinal) getIO()?.emit('usuario-actualizado', userFinal);
             }
             // Solo enviamos reply si existe (ejecutarAccion ya envio su propio mensaje)
             if (commandResult.reply) {
@@ -330,7 +331,7 @@ export const handleIncomingMessage = async (msg: any) => {
 
         // Si la IA quiere ejecutar una accion, guardamos en contexto y pedimos confirmacion
         if (accion === 'CREAR_TICKET' || accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') {
-            console.log('📋 [Confirmacion] Guardando pendiente:', accion, '| ticketData:', JSON.stringify(ticketData));
+            logger.info({ accion, ticketData }, '[Confirmacion] Guardando pendiente');
 
             // Crear resumen para confirmacion
             let resumen = '';
@@ -416,13 +417,13 @@ export const handleIncomingMessage = async (msg: any) => {
                     if (!userActual?.context?.pendienteConfirmacion) return;
 
                     if (!clientReady()) {
-                        console.log(`⏱️ [Timeout] Cliente no listo, el verificador reintentará para ${telefono}`);
+                        logger.info(`⏱️ [Timeout] Cliente no listo, el verificador reintentará para ${telefono}`);
                         return;
                     }
 
                     const chatId = `${telefono}@c.us`;
                     await client.sendMessage(chatId, '⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
-                    console.log(`⏱️ [Timeout] Mensaje enviado a ${telefono}`);
+                    logger.info(`⏱️ [Timeout] Mensaje enviado a ${telefono}`);
 
                     const historial = userActual.context.historialConversacion || [];
                     const nuevoHistorial = [
@@ -438,14 +439,14 @@ export const handleIncomingMessage = async (msg: any) => {
                     userActual.changed('context', true);
                     await userActual.save();
                 } catch (e) {
-                    console.error(`❌ Error en timeout de confirmación para ${telefono} (el verificador reintentará):`, e);
+                    logger.error({ err: e }, `❌ Error en timeout de confirmación para ${telefono} (el verificador reintentará):`);
                 }
             }, TIMEOUT_PENDIENTE);
 
             try {
                 await msg.reply(resumen);
             } catch (e) {
-                console.error('❌ Error al enviar resumen de confirmacion:', e);
+                logger.error({ err: e }, '❌ Error al enviar resumen de confirmacion:');
                 // Si falla el envío, limpiar pendienteConfirmacion
                 user.context = { ...(user.context || {}), pendienteConfirmacion: null };
                 user.changed('context', true);
@@ -457,7 +458,7 @@ export const handleIncomingMessage = async (msg: any) => {
         // Si no es ninguna de las acciones anteriores, respondemos normal
         await msg.reply(resultadoIA.respuesta);
     } catch (error) {
-        console.error('❌ Error:', error);
+        logger.error({ err: error }, '❌ Error:');
     } finally {
         // Chequeamos que 'user' no sea null antes de operar
         if (user) {
@@ -473,11 +474,11 @@ export const handleIncomingMessage = async (msg: any) => {
                     include: [{ model: Role, as: 'rol' }]
                 });
                 
-                if (io && userFinal) {
-                    io.emit('usuario-actualizado', userFinal);
+                if (getIO() && userFinal) {
+                    getIO()?.emit('usuario-actualizado', userFinal);
                 }
             } catch (e) {
-                console.error('❌ Error en finally:', e);
+                logger.error({ err: e }, '❌ Error en finally:');
             }
         }
     }

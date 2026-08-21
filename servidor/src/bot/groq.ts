@@ -1,6 +1,7 @@
 ﻿import 'dotenv/config';
 import { Op } from 'sequelize';
 import { Ticket } from '../models/models.js';
+import { logger } from '../config/logger.js';
 
 const apiKey = process.env.GROQ_API_KEY; 
 
@@ -151,7 +152,7 @@ ${infoTickets}`;
         clearTimeout(timeout);
         const data = await response.json();
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-            console.error('❌ Respuesta Groq inesperada (status ' + response.status + '):', JSON.stringify(data).slice(0, 600));
+            logger.error({ status: response.status, body: JSON.stringify(data).slice(0, 600) }, 'Respuesta Groq inesperada');
             throw new Error('Groq error: ' + (data?.error?.message || JSON.stringify(data).slice(0, 200)));
         }
         const resultado = JSON.parse(data.choices[0].message.content);
@@ -164,7 +165,7 @@ ${infoTickets}`;
         return resultado;
 
     } catch (error: any) {
-        console.error("❌ Error en Groq:", error.message);
+        logger.error({ err: error.message }, "❌ Error en Groq:");
         return {
             respuesta: `Estimado/a ${datosUsuario.nombreCompleto}, tuve un error interno. ¿Podría repetir su solicitud?`,
             accion: "NINGUNA",

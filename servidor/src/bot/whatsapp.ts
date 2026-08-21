@@ -2,17 +2,16 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import { handleIncomingMessage } from './handler.js';
+import { setBotConnected, setBotDisconnected, emitQR } from '../socket/server.js';
+import { logger } from '../config/logger.js';
 
 const client = new Client({
     authStrategy: new LocalAuth({
-        // No le pases la ruta completa aquí si ya la manejas en Docker.
-        // Deja que use la carpeta por defecto 'session'
-        clientId: "bot-norbridge" 
+        clientId: "bot-norbridge"
     }),
-  puppeteer: {
+    puppeteer: {
         headless: true,
         dumpio: true, // 👈 IMPORTANTE: Activá esto para ver errores ocultos de Chrome
-        // Usa la variable de entorno CHROME_PATH, si no existe usa la ruta por defecto
         executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
         args: [
             '--no-sandbox',
@@ -22,42 +21,75 @@ const client = new Client({
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu',
-            // '--single-process', 👈 ELIMINADO: Causa tildes en versiones nuevas
         ],
     }
 });
+
+let reintentos = 0;
+const MAX_REINTENTOS = 5;
+const ESPERA_REINTENTO = 30_000;
+let reconectando = false;
+
+async function intentarReconectar() {
+    if (reconectando) return;
+    reconectando = true;
+
+    while (reintentos < MAX_REINTENTOS) {
+        reintentos++;
+        logger.warn(`Intento de reconexión ${reintentos}/${MAX_REINTENTOS}`);
+        await new Promise(r => setTimeout(r, ESPERA_REINTENTO));
+
+        try {
+            await client.initialize();
+            return;
+        } catch (e: any) {
+            logger.warn({ err: e?.message }, `Reintento ${reintentos} falló`);
+        }
+    }
+
+    logger.error('Se agotaron los reintentos. Se necesita escanear QR manualmente.');
+    reconectando = false;
+}
+
 client.on('qr', (qr) => {
-    conectado = true; // Evita que salte el timeout de advertencia
-    console.log('📱 [WhatsApp] Nuevo código QR. Escanealo para iniciar sesión:');
+    logger.info('Nuevo QR generado');
     qrcode.generate(qr, { small: true });
+    emitQR(qr);
+    reconectando = false;
 });
 
 client.on('ready', () => {
-    conectado = true;
-    console.log('✅ [WhatsApp] ¡Cliente conectado y listo!');
+    reintentos = 0;
+    reconectando = false;
+    const phone = client.info?.wid?._serialized?.split('@')[0] || 'Conectado';
+    logger.info(`WhatsApp conectado (${phone})`);
+    setBotConnected(phone);
 });
+
 client.on('auth_failure', (msg) => {
-    console.error('❌ [WhatsApp] Fallo de autenticación:', msg);
-    console.log('🔄 [WhatsApp] Sesión inválida. Escaneá el nuevo QR.');
+    logger.error({ err: msg }, 'Error de autenticación');
+    setBotDisconnected();
+    reintentos = MAX_REINTENTOS;
 });
 
 client.on('disconnected', (reason) => {
-    console.log(`⚠️ [WhatsApp] Desconectado: ${reason}`);
+    logger.warn(`WhatsApp desconectado: ${reason}`);
+    setBotDisconnected();
+    intentarReconectar();
 });
-
 
 // Timeout de seguridad: aumentado a 90 segundos para dar margen a Docker
 let conectado = false;
-setTimeout(() => {
-    if (!conectado) {
-        console.warn('⚠️ [WhatsApp] El bot está tardando más de lo esperado en iniciar...');
-        console.warn('💡 Si ya escaneaste el QR antes, dale 1 minuto más. Si es la primera vez, espera al QR.');
-        console.warn('💡 Si el problema persiste, verifica permisos con: sudo chown -R 1000:1000 .wwebjs_auth');
-    }
-}, 90000); // <-- Cambiado de 30000 a 90000 (90 segundos)
-
 client.on('qr', () => { conectado = true; });
 client.on('ready', () => { conectado = true; });
+
+setTimeout(() => {
+    if (!conectado) {
+        logger.warn('El bot está tardando más de lo esperado en iniciar...');
+        logger.warn('Si ya escaneaste el QR antes, dale 1 minuto más. Si es la primera vez, espera al QR.');
+        logger.warn('Si el problema persiste, verifica permisos con: sudo chown -R 1000:1000 .wwebjs_auth');
+    }
+}, 90000);
 
 const lastSend = new Map<string, number>();
 const RATE_LIMIT_MS = 2000;
@@ -87,7 +119,7 @@ client.on('message', async (msg: any) => {
             const typingDelay = 1500 + texto.length * 12 + Math.random() * 2000;
             await new Promise(r => setTimeout(r, typingDelay));
         } catch (e: any) {
-            console.warn('⚠️ [Typing] Error al simular escritura:', e?.message || e);
+            logger.warn({ err: e?.message }, 'Error al simular escritura');
             const fallbackDelay = 1500 + Math.random() * 2000;
             await new Promise(r => setTimeout(r, fallbackDelay));
         }
@@ -96,7 +128,7 @@ client.on('message', async (msg: any) => {
         return replyOriginal(content);
     };
 
-    console.log(`📩 Mensaje de ${msg.from}: ${msg.body}`);
+    logger.info(`📩 Mensaje de ${msg.from}: ${msg.body}`);
     await handleIncomingMessage(msg);
 });
 

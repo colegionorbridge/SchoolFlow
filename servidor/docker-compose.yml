@@ -4,15 +4,15 @@ services:
     container_name: bot-norbridge-db
     restart: always
     environment:
-      POSTGRES_USER: norbridge
-      POSTGRES_PASSWORD: norbridge
-      POSTGRES_DB: norbridge
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U norbridge -d norbridge"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,7 +34,8 @@ services:
       - ./.wwebjs_auth:/app/.wwebjs_auth
       - ./.env:/app/.env
     environment:
-      - DATABASE_URL=postgresql://norbridge:norbridge@db:5432/norbridge
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - TZ=America/Argentina/Buenos_Aires
     shm_size: '2gb'
     depends_on:
       db:

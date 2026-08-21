@@ -1,5 +1,6 @@
 import { User, Sector, UserSector, Role } from '../models/models.js';
-import { io } from '../socket/server.js';
+import { getIO } from '../socket/server.js';
+import { logger } from '../config/logger.js';
 
 export const manejarRegistro = async (msg: any, user: any, telefono: string) => {
     const texto = msg.body.trim();
@@ -77,7 +78,7 @@ export const manejarRegistro = async (msg: any, user: any, telefono: string) => 
                     sectorId: sectorAValidar.id
                 });
             } catch (error) {
-                console.log("Aviso: El usuario ya estaba vinculado.");
+                logger.info("Aviso: El usuario ya estaba vinculado.");
             }
 
             user.pasoRegistro = 4;
@@ -180,9 +181,9 @@ const userFinal = await User.findByPk(user.telefono, {
     ]
 });
 
-if (io && userFinal) {
+if (getIO() && userFinal) {
     // Emitimos un evento específico o el mismo de siempre
-    io.emit('usuario-registrado-nuevo', userFinal); 
+    getIO()?.emit('usuario-registrado-nuevo', userFinal); 
 }
 
             await msg.reply(`✅ **Código de rol verificado.**\n\n🎉 **¡Registro completado!** Bienvenido/a al sistema, ${user.nombreCompleto}.`);

@@ -1,5 +1,6 @@
 import { User, Ticket } from '../models/models.js';
-import { io } from '../socket/server.js';
+import { getIO } from '../socket/server.js';
+import { logger } from '../config/logger.js';
 
 export async function ejecutarAccion(
     msg: any,
@@ -8,16 +9,16 @@ export async function ejecutarAccion(
     accion: string,
     ticketData: any
 ) {
-    console.log('🔧 [ejecutarAccion] accion:', accion, '| ticketData:', JSON.stringify(ticketData));
+    logger.info({ accion, ticketData }, '[ejecutarAccion]');
 
     if (accion === 'CREAR_TICKET') {
         if (!ticketData?.asunto) {
-            console.warn('⚠️ [ejecutarAccion] CREAR_TICKET sin asunto. ticketData:', JSON.stringify(ticketData));
+            logger.warn({ ticketData }, '[ejecutarAccion] CREAR_TICKET sin asunto');
             await msg.reply('❌ No se pudo crear el ticket porque falta el asunto.');
             return;
         }
 
-        console.log('📝 [ejecutarAccion] Creando ticket:', ticketData.asunto);
+        logger.info({ ticketData: ticketData.asunto }, '[ejecutarAccion] Creando ticket');
         const nuevoTicket = await Ticket.create({
             asunto: ticketData.asunto,
             descripcion: ticketData.descripcion || "Sin descripcion adicional",
@@ -27,13 +28,13 @@ export async function ejecutarAccion(
             historial: []
         });
 
-        console.log('✅ [ejecutarAccion] Ticket creado con ID:', nuevoTicket.id);
+        logger.info({ ticketId: nuevoTicket.id }, '[ejecutarAccion] Ticket creado');
 
         const ticketConData = await Ticket.findByPk(nuevoTicket.id, {
             include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
         });
 
-        if (io) io.emit('nuevo-ticket', ticketConData);
+        getIO()?.emit('nuevo-ticket', ticketConData);
         await msg.reply(`✅ Ticket *#${nuevoTicket.id}* creado exitosamente.`);
     }
 
@@ -74,7 +75,7 @@ export async function ejecutarAccion(
                 include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
             });
 
-            if (io) io.emit('ticket-actualizado', ticketActualizado);
+            getIO()?.emit('ticket-actualizado', ticketActualizado);
 
             if (accion === 'CERRAR_TICKET') {
                 await msg.reply(`✅ Ticket *#${ticket.id}* cerrado exitosamente.`);

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import { config } from '../config/index.js';
+import { logger } from '../config/logger.js';
 
 const router = Router();
 
@@ -11,10 +13,10 @@ router.post('/login', async (req: any, res: any) => {
       return res.status(400).json({ error: 'Password requerido' });
     }
 
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    
+    const adminPassword = config.adminPassword;
+
     if (!adminPassword) {
-      console.error('❌ ADMIN_PASSWORD no está configurado en .env');
+      logger.error('ADMIN_PASSWORD no está configurado en .env');
       return res.status(500).json({ error: 'Error de configuración del servidor' });
     }
 
@@ -23,25 +25,25 @@ router.post('/login', async (req: any, res: any) => {
     }
 
     const token = jwt.sign(
-      { role: 'admin', exp: Math.floor(Date.now() / 1000) + (8 * 60 * 60) }, // 8 horas
-      process.env.JWT_SECRET || 'secret-temporal'
+      { role: 'admin', esAdmin: true, nombre: 'Admin', exp: Math.floor(Date.now() / 1000) + (8 * 60 * 60) }, // 8 horas
+      config.jwt.secret
     );
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       token,
       expiresIn: 8 * 60 * 60 // 8 horas en segundos
     });
 
   } catch (error) {
-    console.error('❌ Error en login:', error);
+    logger.error({ err: error }, 'Error en login');
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
 router.get('/verify', async (req: any, res: any) => {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader) {
     return res.status(401).json({ valid: false, error: 'No autorizado' });
   }
@@ -53,7 +55,7 @@ router.get('/verify', async (req: any, res: any) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret-temporal');
+    const decoded = jwt.verify(token, config.jwt.secret);
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ valid: false, error: 'Token inválido o expirado' });

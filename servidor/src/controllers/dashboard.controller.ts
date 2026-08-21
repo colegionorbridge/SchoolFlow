@@ -1,8 +1,9 @@
 import { type Request, type Response } from 'express';
 import { Ticket, User, Role, Sector, sequelize } from '../models/models.js';
-import { io } from '../socket/server.js'
+import { getIO } from '../socket/server.js'
 // Importamos la instancia de client desde tu archivo bot/whatsapp.js
 import { client } from '../bot/whatsapp.js';
+import { logger } from '../config/logger.js';
 
 // ==================== GESTIÓN DE USUARIOS ====================
 
@@ -44,11 +45,11 @@ export const updateUsuario = async (req: Request, res: Response) => {
       ]
     });
 
-    if (io) io.emit('usuario-actualizado', usuarioActualizado);
+    getIO()?.emit('usuario-actualizado', usuarioActualizado);
 
     res.json(usuarioActualizado);
   } catch (error) {
-    console.error('❌ Error al actualizar usuario:', error);
+    logger.error({ err: error }, '❌ Error al actualizar usuario:');
     res.status(500).json({ error: 'Error al actualizar usuario' });
   }
 };
@@ -62,7 +63,7 @@ export const getRoles = async (_req: Request, res: Response) => {
     });
     res.json(roles);
   } catch (error) {
-    console.error('❌ Error al obtener roles:', error);
+    logger.error({ err: error }, '❌ Error al obtener roles:');
     res.status(500).json({ error: 'Error al obtener roles' });
   }
 };
@@ -85,7 +86,7 @@ export const createRole = async (req: Request, res: Response) => {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Ya existe un rol con ese nombre' });
     }
-    console.error('❌ Error al crear rol:', error);
+    logger.error({ err: error }, '❌ Error al crear rol:');
     res.status(500).json({ error: 'Error al crear rol' });
   }
 };
@@ -109,7 +110,7 @@ export const updateRole = async (req: Request, res: Response) => {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Ya existe un rol con ese nombre' });
     }
-    console.error('❌ Error al actualizar rol:', error);
+    logger.error({ err: error }, '❌ Error al actualizar rol:');
     res.status(500).json({ error: 'Error al actualizar rol' });
   }
 };
@@ -126,7 +127,7 @@ export const deleteRole = async (req: Request, res: Response) => {
     await rol.destroy();
     res.json({ message: 'Rol eliminado correctamente' });
   } catch (error) {
-    console.error('❌ Error al eliminar rol:', error);
+    logger.error({ err: error }, '❌ Error al eliminar rol:');
     res.status(500).json({ error: 'Error al eliminar rol' });
   }
 };
@@ -140,7 +141,7 @@ export const getSectores = async (_req: Request, res: Response) => {
     });
     res.json(sectores);
   } catch (error) {
-    console.error('❌ Error al obtener sectores:', error);
+    logger.error({ err: error }, '❌ Error al obtener sectores:');
     res.status(500).json({ error: 'Error al obtener sectores' });
   }
 };
@@ -163,7 +164,7 @@ export const createSector = async (req: Request, res: Response) => {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Ya existe un sector con ese nombre' });
     }
-    console.error('❌ Error al crear sector:', error);
+    logger.error({ err: error }, '❌ Error al crear sector:');
     res.status(500).json({ error: 'Error al crear sector' });
   }
 };
@@ -187,7 +188,7 @@ export const updateSector = async (req: Request, res: Response) => {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Ya existe un sector con ese nombre' });
     }
-    console.error('❌ Error al actualizar sector:', error);
+    logger.error({ err: error }, '❌ Error al actualizar sector:');
     res.status(500).json({ error: 'Error al actualizar sector' });
   }
 };
@@ -204,7 +205,7 @@ export const deleteSector = async (req: Request, res: Response) => {
     await sector.destroy();
     res.json({ message: 'Sector eliminado correctamente' });
   } catch (error) {
-    console.error('❌ Error al eliminar sector:', error);
+    logger.error({ err: error }, '❌ Error al eliminar sector:');
     res.status(500).json({ error: 'Error al eliminar sector' });
   }
 };
@@ -223,7 +224,7 @@ export const getTickets = async (_req: Request, res: Response) => {
     });
     res.json(tickets);
   } catch (error) {
-    console.error(' Error al obtener tickets:', error);
+    logger.error({ err: error }, ' Error al obtener tickets:');
     res.status(500).json({ error: 'Error al obtener tickets' });
   }
 };
@@ -254,13 +255,13 @@ export const createTicket = async (req: Request, res: Response) => {
       include: [{ model: User, as: 'autor', attributes: ['nombreCompleto', 'telefono'] }]
     });
 
-    if (io && ticketCreado) {
-      io.emit('nuevo-ticket', ticketCreado);
+    if (getIO() && ticketCreado) {
+      getIO()?.emit('nuevo-ticket', ticketCreado);
     }
 
     res.status(201).json(ticketCreado);
   } catch (error) {
-    console.error('❌ Error al crear ticket manual:', error);
+    logger.error({ err: error }, '❌ Error al crear ticket manual:');
     res.status(500).json({ error: 'Error al crear ticket' });
   }
 };
@@ -275,7 +276,7 @@ export const getUsuarios = async (_req: Request, res: Response) => {
     });
     res.json(usuarios);
   } catch (error) {
-    console.error(' Error al obtener usuarios:', error);
+    logger.error({ err: error }, ' Error al obtener usuarios:');
     res.status(500).json({ error: 'Error al obtener usuarios' });
   }
 };
@@ -325,17 +326,17 @@ export const updateTicket = async (req: Request, res: Response) => {
               ? ticket.userTelefono 
               : `${ticket.userTelefono}@c.us`;
 
-          console.log('📱 [Notificacion] chatId:', chatId, '| nuevaNota:', nuevaNota, '| estado:', estado, '| estadoAnterior:', estadoAnterior);
+          logger.info({ chatId, nuevaNota, estado, estadoAnterior }, '[Notificacion]');
 
           // Caso A: Se agrego una nota/comentario (independientemente del cambio de estado)
           if (nuevaNota && nuevaNota.trim() !== '') {
               const msjNota = `📋 El tecnico *Alejandro* agrego un comentario a tu ticket *#${ticket.id}*: "${ticket.asunto}"\n\n💬 _"${nuevaNota.trim()}"_`;
-              console.log('📨 [Notificacion] Enviando mensaje de nota:', msjNota);
+              logger.info({ msjNota }, '[Notificacion] Enviando mensaje de nota');
               try {
                   await client.sendMessage(chatId, msjNota);
-                  console.log('✅ [Notificacion] Mensaje de nota enviado correctamente');
+                  logger.info('✅ [Notificacion] Mensaje de nota enviado correctamente');
               } catch (e) {
-                  console.error('❌ [Notificacion] Error enviando nota:', e);
+                  logger.error({ err: e }, '❌ [Notificacion] Error enviando nota:');
               }
           }
 
@@ -344,9 +345,9 @@ export const updateTicket = async (req: Request, res: Response) => {
               const msjProceso = `Hola! Te informamos que tu ticket *#${ticket.id}* ("${ticket.asunto}") ya esta *en proceso de reparacion*.`;
               try {
                   await client.sendMessage(chatId, msjProceso);
-                  console.log('✅ [Notificacion] Mensaje de en_proceso enviado correctamente');
+                  logger.info('✅ [Notificacion] Mensaje de en_proceso enviado correctamente');
               } catch (e) {
-                  console.error('❌ [Notificacion] Error enviando en_proceso:', e);
+                  logger.error({ err: e }, '❌ [Notificacion] Error enviando en_proceso:');
               }
           } 
           
@@ -355,9 +356,9 @@ export const updateTicket = async (req: Request, res: Response) => {
               const msjCierre = `✅ Tu ticket *#${ticket.id}* ("${ticket.asunto}") ha sido *finalizado*. \n\nSi el problema persiste, podes abrir uno nuevo. Gracias!`;
               try {
                   await client.sendMessage(chatId, msjCierre);
-                  console.log('✅ [Notificacion] Mensaje de cierre enviado correctamente');
+                  logger.info('✅ [Notificacion] Mensaje de cierre enviado correctamente');
               } catch (e) {
-                  console.error('❌ [Notificacion] Error enviando cierre:', e);
+                  logger.error({ err: e }, '❌ [Notificacion] Error enviando cierre:');
               }
           }
         }
@@ -368,14 +369,14 @@ export const updateTicket = async (req: Request, res: Response) => {
         });
 
         // Emitimos por Socket para que se vea el cambio en tiempo real en el front
-        if (io && ticketActualizado) {
-            io.emit('ticket-actualizado', ticketActualizado);
+        if (getIO() && ticketActualizado) {
+            getIO()?.emit('ticket-actualizado', ticketActualizado);
         }
 
         return res.json(ticketActualizado);
 
     } catch (error) {
-        console.error('❌ Error en updateTicket:', error);
+        logger.error({ err: error }, '❌ Error en updateTicket:');
         return res.status(500).json({ message: 'Error interno del servidor' });
     }
 };

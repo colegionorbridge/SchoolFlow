@@ -1,45 +1,46 @@
-import { type Request, type Response, type NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { config } from '../config/index.js';
 
-interface AuthRequest extends Request {
-  user?: any;
+export interface AuthRequest extends Request {
+  user?: { telefono?: string; esAdmin?: boolean; role?: string; superAdmin?: boolean; nombre?: string };
 }
 
-export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No autorizado - Token faltante' });
+export const usuariosBaneados = new Set<string>();
+
+export function banearUsuario(telefono: string) {
+  usuariosBaneados.add(telefono);
+}
+
+export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token requerido' });
   }
-
-  const token = authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'No autorizado - Formato de token inválido' });
-  }
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret-temporal');
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Token inválido o expirado' });
-  }
-};
-
-export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret-temporal');
-        req.user = decoded;
-      } catch (error) {
-        // Token inválido, pero continuamos sin usuario
-      }
+    const token = header.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'Token requerido' });
     }
+    const decoded = jwt.verify(token, config.jwt.secret) as {
+      telefono?: string;
+      esAdmin?: boolean;
+      role?: string;
+      superAdmin?: boolean;
+      nombre?: string;
+    };
+    if (decoded.telefono && usuariosBaneados.has(decoded.telefono)) {
+      return res.status(401).json({ error: 'Usuario eliminado. Debe registrarse nuevamente.' });
+    }
+    req.user = {
+      telefono: decoded.telefono,
+      esAdmin: decoded.esAdmin ?? decoded.role === 'admin',
+      role: decoded.role,
+      superAdmin: decoded.superAdmin,
+      nombre: decoded.nombre,
+    };
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Token inválido' });
   }
-  next();
-};
+}
