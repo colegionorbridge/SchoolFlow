@@ -1,5 +1,45 @@
 # Tareas - bot-norbridge
 
+## 2026-08-21 — Paridad con bot-dgcatra (plan) + Backup de BD
+
+> **Estado:** planificado. Punto de retorno: commit checkpoint con tag `pre-paridad` en `main`.
+>
+> Objetivo: portar las mejoras de **bot-dgcatra** a este proyecto, manteniendo **intacta la IA** (Groq NLP multi-turno en `groq.ts`) y el **modelo de dominio** (roles/sectores, sin "bases"). `bot-dgcatra` NO se toca.
+
+### Backup lógico de base de datos (realizado 2026-08-21)
+
+Backup previo a cualquier cambio, guardado en `/home/tic/backups/norbridge/` (fuera del repo, NO commiteado):
+
+- `norbridge-2026-08-21.dump` — formato binario `pg_dump -Fc -Z9` (restaurar con `pg_restore`)
+- `norbridge-2026-08-21.sql` — SQL plano (`--clean --if-exists --no-owner`)
+
+Estado al momento del backup: `usuarios` 71 · `tickets` 156 · `roles` 8 · `sectores` 4 · `usuarios_sectores` 62.
+
+**Restaurar si hace falta:**
+```bash
+docker exec -i bot-norbridge-db pg_restore -U norbridge -d norbridge --clean --if-exists < /home/tic/backups/norbridge/norbridge-<fecha>.dump
+```
+
+### Checklist del plan (secciones A–F)
+
+- [ ] **A. Infraestructura/seguridad**: pino logger, helmet, express-rate-limit, graceful shutdown, reconexión del bot + estado/QR por socket + `/health/bot`, Socket.IO con JWT + blacklist, `config/index.ts` + `config/settings.ts`, endpoints `/api/settings`, credenciales DB externalizadas + `TZ`, README raíz (hecho).
+- [ ] **B. Modelo de datos**: modelo `Conversacion`, `User.chatId`, `Ticket.tecnicoAsignado` + `Ticket.solucion`.
+- [ ] **C. Bot (anti-detección/resiliencia)**: cola FIFO por usuario, `sendSeen()`, manejo multimedia, `session.ts` (caché LRU + limpieza de sesión), `schemas.ts` (Zod) + tests vitest, `helpers.ts`, `enviar.ts` unificado (chatIdCache + timeout + iniciarTyping), `historial.ts`.
+- [ ] **D. Chat takeover**: `chat.controller` + `chat.routes` (iniciar/enviar/finalizar/estado), `context.chatConAdmin`, endpoint `GET /api/tickets/:id/conversacion`.
+- [ ] **E. Controllers/routes/tickets**: dividir `dashboard.controller.ts` monolito, middleware admin/superAdmin + permisos (adoptar/cerrar/reasignar/derivar), paginación/búsqueda/orden server-side (`findAndCountAll`), usuarios con filtros + blacklist.
+- [ ] **F. Frontend**: login OTP por WhatsApp + código maestro (AuthContext + LoginPage 6 dígitos), layout multipágina (sidebar), TicketDetail con chat takeover, TicketsList con filtros, páginas admin, `ConfirmButton`/`StatCard`/`NavItem`, `useSocket` con sonidos, página Configuración.
+
+### Decisiones confirmadas
+
+| Decisión | Opción elegida |
+|----------|----------------|
+| Login | Portar OTP + código maestro (multi-admin con superAdmin) |
+| Frontend | Multipágina completo (sidebar + páginas) |
+| Chat takeover | Sí, completo |
+| Dominio admin | Mantener roles de norbridge (NO migrar a `Sector.isAdmin`) |
+
+---
+
 ## 2026-08-14 — Fix pendientes colgados + limpiador de contexto
 
 ### Problema
