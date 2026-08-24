@@ -2,7 +2,7 @@
 
 ## 2026-08-21 — Paridad con bot-dgcatra (plan) + Backup de BD
 
-> **Estado:** planificado. Punto de retorno: commit checkpoint con tag `pre-paridad` en `main`.
+> **Estado:** completado. Punto de retorno: commit checkpoint con tag `pre-paridad` en `main`.
 >
 > Objetivo: portar las mejoras de **bot-dgcatra** a este proyecto, manteniendo **intacta la IA** (Groq NLP multi-turno en `groq.ts`) y el **modelo de dominio** (roles/sectores, sin "bases"). `bot-dgcatra` NO se toca.
 
@@ -38,6 +38,15 @@ docker exec -i bot-norbridge-db pg_restore -U norbridge -d norbridge --clean --i
 | Frontend | Multipágina completo (sidebar + páginas) |
 | Chat takeover | Sí, completo |
 | Dominio admin | Mantener roles de norbridge (NO migrar a `Sector.isAdmin`) |
+
+### Deploy y datos (2026-08-21)
+
+- **Código maestro**: `MASTER_CODE=202428` (6 dígitos, porque el login de código maestro solo acepta 6 dígitos numéricos). Se cambia desde Configuración.
+- **Backfill de tickets viejos**: los tickets `en_proceso` y `cerrado` previos quedan con `tecnicoAsignado='Admin'` (eran tomados por el admin). Los `abierto` quedan `NULL` ("—"). Comando (post-redeploy):
+  ```sql
+  UPDATE tickets SET "tecnicoAsignado"='Admin' WHERE estado IN ('en_proceso','cerrado') AND "tecnicoAsignado" IS NULL;
+  ```
+- **Deploy**: `git push origin main --tags` + `docker compose up --build -d` (servidor) + rebuild Vercel (frontend). `sequelize.sync({ alter: true })` agrega `conversaciones` y las columnas `chatId`/`tecnicoAsignado`/`solucion` sin tocar datos.
 
 ---
 
