@@ -23,7 +23,7 @@ docker exec -i bot-norbridge-db pg_restore -U norbridge -d norbridge --clean --i
 ### Checklist del plan (secciones A–F)
 
 - [x] **A. Infraestructura/seguridad**: pino logger, helmet, express-rate-limit, graceful shutdown, reconexión del bot + estado/QR por socket + `/health/bot`, Socket.IO con JWT + blacklist, `config/index.ts` + `config/settings.ts`, endpoints `/api/settings`, credenciales DB externalizadas + `TZ`, README raíz (hecho). Commits `67e8ba8` + `ccb0de9`.
-- [ ] **B. Modelo de datos**: modelo `Conversacion`, `User.chatId`, `Ticket.tecnicoAsignado` + `Ticket.solucion`.
+- [x] **B. Modelo de datos**: modelo `Conversacion`, `User.chatId`, `Ticket.tecnicoAsignado` + `Ticket.solucion`. Commit `3ade710`, tag `seccion-B`.
 - [ ] **C. Bot (anti-detección/resiliencia)**: cola FIFO por usuario, `sendSeen()`, manejo multimedia, `session.ts` (caché LRU + limpieza de sesión), `schemas.ts` (Zod) + tests vitest, `helpers.ts`, `enviar.ts` unificado (chatIdCache + timeout + iniciarTyping), `historial.ts`.
 - [ ] **D. Chat takeover**: `chat.controller` + `chat.routes` (iniciar/enviar/finalizar/estado), `context.chatConAdmin`, endpoint `GET /api/tickets/:id/conversacion`.
 - [ ] **E. Controllers/routes/tickets**: dividir `dashboard.controller.ts` monolito, middleware admin/superAdmin + permisos (adoptar/cerrar/reasignar/derivar), paginación/búsqueda/orden server-side (`findAndCountAll`), usuarios con filtros + blacklist.
