@@ -57,6 +57,7 @@ export default function TicketDetail() {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [chatEnviando, setChatEnviando] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMsgs, tab]);
 
@@ -153,11 +154,13 @@ export default function TicketDetail() {
   }
 
   async function tomarControl() {
+    setChatLoading(true);
     try {
       await api.post(`/api/tickets/${id}/chat/iniciar`);
       setChatActivo(true);
       setChatAdminNombre(user?.nombre || 'Técnico');
     } catch (e: any) { setError(e.message); }
+    finally { setChatLoading(false); }
   }
 
   async function enviarChatMsg(txt?: string) {
@@ -174,11 +177,13 @@ export default function TicketDetail() {
   }
 
   async function devolverControl() {
+    setChatLoading(true);
     try {
       await api.post(`/api/tickets/${id}/chat/finalizar`);
       setChatActivo(false);
       setChatAdminNombre('');
     } catch (e: any) { setError(e.message); }
+    finally { setChatLoading(false); }
   }
 
   if (loading) return <div className="empty"><span className="spinner" /><br />Cargando ticket...</div>;
@@ -384,9 +389,11 @@ export default function TicketDetail() {
               </div>
               {user?.esAdmin && (
                 chatActivo ? (
-                  <ConfirmButton label="Devolver al bot" message="¿Devolver control al bot?" danger onConfirm={devolverControl} />
+                  <ConfirmButton label="Devolver al bot" message="¿Devolver control al bot?" danger loading={chatLoading} onConfirm={devolverControl} />
                 ) : (
-                  <button className="btn btn-primary btn-sm" onClick={tomarControl}>Tomar control</button>
+                  <button className="btn btn-primary btn-sm" onClick={tomarControl} disabled={chatLoading}>
+                    {chatLoading ? <span className="spinner spinner-sm" /> : 'Tomar control'}
+                  </button>
                 )
               )}
             </div>

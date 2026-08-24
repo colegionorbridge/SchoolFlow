@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { useSocket } from '../context/useSocket';
@@ -41,11 +41,27 @@ export default function TicketsList() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortDir, setSortDir] = useState<'ASC' | 'DESC'>('DESC');
+  const [showNew, setShowNew] = useState(false);
+  const [newTicket, setNewTicket] = useState({ asunto: '', descripcion: '', ubicacion: '', prioridad: 'media' });
+  const [saving, setSaving] = useState(false);
 
   function toggleSort(col: string) {
     if (sortBy === col) setSortDir(d => d === 'ASC' ? 'DESC' : 'ASC');
     else { setSortBy(col); setSortDir('DESC'); }
     setPage(1);
+  }
+
+  async function handleCreateManual(e: FormEvent) {
+    e.preventDefault();
+    if (!newTicket.asunto.trim() || !newTicket.descripcion.trim() || !newTicket.ubicacion.trim()) return;
+    setSaving(true);
+    try {
+      await api.post('/api/tickets', newTicket);
+      setShowNew(false);
+      setNewTicket({ asunto: '', descripcion: '', ubicacion: '', prioridad: 'media' });
+      setPage(1);
+    } catch { }
+    finally { setSaving(false); }
   }
 
   const fetchTickets = useCallback(() => {
@@ -91,6 +107,9 @@ export default function TicketsList() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '.5rem' }}>
         <h2 style={{ margin: 0 }}>Tickets</h2>
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowNew(true)}>
+            <Plus size={16} /> Nuevo ticket
+          </button>
           <div style={{ position: 'relative' }}>
             <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
             <input type="text" placeholder="Buscar..." value={search}
@@ -165,6 +184,40 @@ export default function TicketsList() {
             </div>
           )}
         </>
+      )}
+
+      {showNew && (
+        <div className="modal-overlay" onClick={() => setShowNew(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>Nuevo ticket manual</h3>
+            <form onSubmit={handleCreateManual}>
+              <div className="form-group">
+                <label>Asunto *</label>
+                <input className="input" value={newTicket.asunto} onChange={e => setNewTicket({ ...newTicket, asunto: e.target.value })} placeholder="Ej: Proyector no enciende" required />
+              </div>
+              <div className="form-group">
+                <label>Descripción *</label>
+                <textarea className="input" rows={4} value={newTicket.descripcion} onChange={e => setNewTicket({ ...newTicket, descripcion: e.target.value })} placeholder="Detallá el problema..." required />
+              </div>
+              <div className="form-group">
+                <label>Ubicación *</label>
+                <input className="input" value={newTicket.ubicacion} onChange={e => setNewTicket({ ...newTicket, ubicacion: e.target.value })} placeholder="Ej: PRIMARIA - Aula 3" required />
+              </div>
+              <div className="form-group">
+                <label>Prioridad</label>
+                <select className="input" value={newTicket.prioridad} onChange={e => setNewTicket({ ...newTicket, prioridad: e.target.value })}>
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '.5rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowNew(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? 'Creando...' : 'Crear ticket'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

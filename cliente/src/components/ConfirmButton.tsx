@@ -6,9 +6,10 @@ interface Props {
   label: string;
   danger?: boolean;
   children?: ReactNode;
+  loading?: boolean;
 }
 
-export default function ConfirmButton({ onConfirm, message, label, danger, children }: Props) {
+export default function ConfirmButton({ onConfirm, message, label, danger, children, loading }: Props) {
   const [asking, setAsking] = useState(false);
 
   if (!asking) {
@@ -22,8 +23,10 @@ export default function ConfirmButton({ onConfirm, message, label, danger, child
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem', fontSize: '.85rem' }}>
       <span style={{ color: 'var(--text-secondary)' }}>{message}</span>
-      <button className="btn btn-danger btn-sm" onClick={() => { onConfirm(); setAsking(false); }}>Sí</button>
-      <button className="btn btn-ghost btn-sm" onClick={() => setAsking(false)}>No</button>
+      <button className="btn btn-danger btn-sm" disabled={loading} onClick={() => { onConfirm(); setAsking(false); }}>
+        {loading ? <span className="spinner spinner-sm" /> : 'Sí'}
+      </button>
+      <button className="btn btn-ghost btn-sm" disabled={loading} onClick={() => setAsking(false)}>No</button>
     </span>
   );
 }

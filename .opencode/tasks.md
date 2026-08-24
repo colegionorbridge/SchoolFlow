@@ -1,5 +1,14 @@
 # Tareas - bot-norbridge
 
+## 2026-08-24 — Fixes y mejoras post-deploy
+
+- [x] **Historial de conversación**: al crear un ticket por WhatsApp, los mensajes recientes (`conversaciones` con `ticketId NULL`) se asocian al ticket en `bot/actions.ts` (`Conversacion.update`). Backfill manual del ticket #200 (7 mensajes).
+- [x] **Sonidos**: copiados `ticket-creado.mp3` y `ticket-asignado.mp3` desde dgcatra a `cliente/public/sounds/`; `useSocket.ts` reproduce sonido en `nuevo-ticket` y `ticket-asignado`.
+- [x] **Ticket manual**: botón "+ Nuevo ticket" en `TicketsList` con modal (asunto/descripción/ubicación/prioridad) → `POST /api/tickets` (`origen=manual`, `userTelefono=null`). Disponible para cualquier usuario autenticado.
+- [x] **Loader chat**: spinner en "Tomar control" y "Devolver al bot" (`chatLoading`). `ConfirmButton` ahora acepta prop `loading`.
+
+---
+
 ## 2026-08-21 — Paridad con bot-dgcatra (plan) + Backup de BD
 
 > **Estado:** completado. Punto de retorno: commit checkpoint con tag `pre-paridad` en `main`.

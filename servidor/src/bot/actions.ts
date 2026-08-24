@@ -1,6 +1,7 @@
-import { User, Ticket } from '../models/models.js';
+import { User, Ticket, Conversacion } from '../models/models.js';
 import { getIO } from '../socket/server.js';
 import { logger } from '../config/logger.js';
+import { enviarTexto } from './enviar.js';
 
 export async function ejecutarAccion(
     msg: any,
@@ -30,12 +31,18 @@ export async function ejecutarAccion(
 
         logger.info({ ticketId: nuevoTicket.id }, '[ejecutarAccion] Ticket creado');
 
+        // Asociar los mensajes recientes de la conversación al ticket recién creado
+        await Conversacion.update(
+            { ticketId: nuevoTicket.id },
+            { where: { userTelefono: telefono, ticketId: null } }
+        ).catch(e => logger.error({ err: e?.message }, '[ejecutarAccion] asociar conversacion'));
+
         const ticketConData = await Ticket.findByPk(nuevoTicket.id, {
             include: [{ model: User, as: 'autor', attributes: ['nombreCompleto'] }]
         });
 
         getIO()?.emit('nuevo-ticket', ticketConData);
-        await msg.reply(`✅ Ticket *#${nuevoTicket.id}* creado exitosamente.`);
+        await enviarTexto(telefono, `✅ Ticket *#${nuevoTicket.id}* creado exitosamente.`, nuevoTicket.id);
     }
 
     if ((accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') && ticketData?.id != null) {
