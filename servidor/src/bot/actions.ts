@@ -42,7 +42,7 @@ export async function ejecutarAccion(
         });
 
         getIO()?.emit('nuevo-ticket', ticketConData);
-        await enviarTexto(telefono, `✅ Ticket *#${nuevoTicket.id}* creado exitosamente.`, nuevoTicket.id);
+        await enviarTexto(telefono, `✅ Ticket *#${nuevoTicket.id}*: "${nuevoTicket.asunto}" creado exitosamente.`, nuevoTicket.id);
     }
 
     if ((accion === 'AGREGAR_COMENTARIO' || accion === 'CERRAR_TICKET') && ticketData?.id != null) {
@@ -94,9 +94,9 @@ export async function ejecutarAccion(
             getIO()?.emit('ticket-actualizado', ticketActualizado);
 
             if (accion === 'CERRAR_TICKET') {
-                await msg.reply(`✅ Ticket *#${ticket.id}* cerrado exitosamente.`);
+                await msg.reply(`✅ Ticket *#${ticket.id}*: "${ticket.asunto}" cerrado exitosamente.`);
             } else {
-                await msg.reply(`✅ Comentario agregado al ticket *#${ticket.id}*.`);
+                await msg.reply(`✅ Comentario agregado al ticket *#${ticket.id}*: "${ticket.asunto}".`);
             }
         }
     }

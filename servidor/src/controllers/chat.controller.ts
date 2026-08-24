@@ -43,7 +43,7 @@ export async function iniciarChat(req: AuthRequest, res: Response) {
 
           await enviarTexto(
             ticket.userTelefono as string,
-            `📢 *Ticket #${ticket.id}*\n\nEl técnico finalizó la charla por inactividad. Si necesitás algo más, escribí *ayuda*.`,
+            `📢 *Ticket #${ticket.id}*: "${ticket.asunto}"\n\nEl técnico finalizó la charla por inactividad. Si necesitás algo más, escribí *ayuda*.`,
             ticket.id,
           );
 
@@ -54,7 +54,7 @@ export async function iniciarChat(req: AuthRequest, res: Response) {
 
     await enviarTexto(
       ticket.userTelefono as string,
-      `📢 *Ticket #${ticket.id}*\n\nUn técnico se pondrá en contacto con vos a la brevedad.`,
+      `📢 *Ticket #${ticket.id}*: "${ticket.asunto}"\n\nUn técnico se pondrá en contacto con vos a la brevedad.`,
       ticket.id,
     );
 
@@ -118,7 +118,7 @@ export async function finalizarChat(req: AuthRequest, res: Response) {
 
     await enviarTexto(
       ticket.userTelefono,
-      `📢 *Ticket #${ticket.id}*\n\nEl técnico finalizó la charla. Si necesitás algo más, escribí *ayuda*.`,
+      `📢 *Ticket #${ticket.id}*: "${ticket.asunto}"\n\nEl técnico finalizó la charla. Si necesitás algo más, escribí *ayuda*.`,
       ticket.id,
     );
 

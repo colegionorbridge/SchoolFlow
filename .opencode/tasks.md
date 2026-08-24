@@ -1,5 +1,11 @@
 # Tareas - bot-norbridge
 
+## 2026-08-24 — Asunto en los mensajes del bot
+
+- [x] Todo mensaje que referencia un ticket ahora incluye el asunto (`*Ticket #N*: "asunto"`): notificaciones de estado (`tickets.controller`), mensajes de chat (`chat.controller`) y confirmaciones del bot (`actions.ts`, `commands.ts`).
+
+---
+
 ## 2026-08-24 — Comentarios separados del historial
 
 - [x] **Modelo `Ticket`**: agregado campo `comentarios` (JSON, `[{ fecha, autor, texto }]`).

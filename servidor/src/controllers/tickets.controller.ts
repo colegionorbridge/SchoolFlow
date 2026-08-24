@@ -187,12 +187,12 @@ export async function update(req: AuthRequest, res: Response) {
       if (estado && estado !== oldEstado) {
         let msg = '';
         if (estado === 'en_proceso') {
-          msg = `📋 *Ticket #${ticket.id}*\n🔧 ${autor} ya está trabajando en tu caso.`;
+          msg = `📋 *Ticket #${ticket.id}*: "${ticket.asunto}"\n🔧 ${autor} ya está trabajando en tu caso.`;
         } else if (estado === 'cerrado') {
-          msg = `📋 *Ticket #${ticket.id}*\n✅ ${autor} lo marcó como *resuelto*.`;
+          msg = `📋 *Ticket #${ticket.id}*: "${ticket.asunto}"\n✅ ${autor} lo marcó como *resuelto*.`;
           if (solucion) msg += `\n🔧 Solución: ${(solucion as string).substring(0, 200)}`;
         } else if (estado === 'abierto') {
-          msg = `📋 *Ticket #${ticket.id}*\n🔄 ${autor} reabrió el ticket.\nUn técnico va a revisarlo nuevamente.`;
+          msg = `📋 *Ticket #${ticket.id}*: "${ticket.asunto}"\n🔄 ${autor} reabrió el ticket.\nUn técnico va a revisarlo nuevamente.`;
         }
         if (msg) notificarAgente(ticket.userTelefono, msg);
       }

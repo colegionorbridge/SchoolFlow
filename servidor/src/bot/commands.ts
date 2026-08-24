@@ -299,7 +299,7 @@ ${notasTexto}`
 
         return {
             handled: true,
-            reply: `✅ Ticket *#${ticket.id}* cerrado correctamente.`
+            reply: `✅ Ticket *#${ticket.id}*: "${ticket.asunto}" cerrado correctamente.`
         };
     }
 
