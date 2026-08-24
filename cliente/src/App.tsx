@@ -1,100 +1,41 @@
-import { useState, useEffect, useMemo } from 'react';
-import { RouterProvider } from 'react-router-dom';
-import { socket } from './socket';
-import { createMyRouter } from './routes/AppRoutes';
-import { DataProvider } from './context/DataContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { useAuth } from './context/AuthContext';
+import LoginPage from './pages/LoginPage';
+import DashboardLayout from './layouts/DashboardLayout';
+import DashboardHome from './pages/DashboardHome';
+import TicketsList from './pages/TicketsList';
+import TicketDetail from './pages/TicketDetail';
+import RolesPage from './pages/admin/RolesPage';
+import SectoresPage from './pages/admin/SectoresPage';
+import UsuariosPage from './pages/admin/UsuariosPage';
+import SettingsPage from './pages/admin/SettingsPage';
 
-const API_URL = import.meta.env.VITE_API_URL;
+function Private({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function AdminOnly({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.superAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
-  const [isAuth, setIsAuth] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Verificar token al cargar la app
-  useEffect(() => {
-    const verifyToken = async () => {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API_URL}/api/auth/verify`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-          setIsAuth(true);
-        } else {
-          localStorage.removeItem('token');
-        }
-      } catch (error) {
-        localStorage.removeItem('token');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    verifyToken();
-  }, []);
-
-  // Configuramos los listeners del socket y conectamos solo si está autenticado
-  useEffect(() => {
-    const onConnect = () => {
-      console.log('✅ Conectado al servidor - ID:', socket.id);
-    };
-
-    const onDisconnect = (reason: string) => {
-      console.log('❌ Desconectado - Razón:', reason);
-    };
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-
-    // Solo conectar si está autenticado y no está conectado
-    if (isAuth && !socket.connected) {
-      const token = localStorage.getItem('token');
-      socket.auth = { token };
-      console.log('🔌 Conectando socket...');
-      socket.connect();
-    }
-
-    // Desconectar si no está autenticado
-    if (!isAuth && socket.connected) {
-      console.log('🔌 Desconectando socket (no autenticado)');
-      socket.disconnect();
-    }
-
-    return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-    };
-  }, [isAuth]); // Se ejecuta cuando cambia el estado de autenticación
-
-  // Creamos el router pasando el estado actual
-  const router = useMemo(() => 
-    createMyRouter({ isAuth, setIsAuth }), 
-  [isAuth]);
-
-  if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: '#1a365d'
-      }}>
-        <p style={{ color: 'white' }}>Cargando...</p>
-      </div>
-    );
-  }
-
   return (
-    <DataProvider>
-      <RouterProvider router={router} />
-    </DataProvider>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<Private><DashboardLayout /></Private>}>
+        <Route index element={<DashboardHome />} />
+        <Route path="tickets" element={<TicketsList />} />
+        <Route path="tickets/:id" element={<TicketDetail />} />
+        <Route path="admin/roles" element={<AdminOnly><RolesPage /></AdminOnly>} />
+        <Route path="admin/sectores" element={<AdminOnly><SectoresPage /></AdminOnly>} />
+        <Route path="admin/usuarios" element={<AdminOnly><UsuariosPage /></AdminOnly>} />
+        <Route path="admin/settings" element={<AdminOnly><SettingsPage /></AdminOnly>} />
+      </Route>
+    </Routes>
   );
 }
