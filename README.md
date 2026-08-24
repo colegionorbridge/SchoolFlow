@@ -291,7 +291,7 @@ docker compose up --build -d
 
 ## Plan de mejoras — paridad con bot-dgcatra
 
-> Estado: **planificado** (2026-08-21). Ver `.opencode/tasks.md` para el detalle y seguimiento.
+> Estado: **completado** (2026-08-21). Ver `.opencode/tasks.md` para el detalle. Punto de retorno: tag `pre-paridad`; una tag por sección (`seccion-B` a `seccion-F`).
 
 Se va a portar la arquitectura y las mejoras de **bot-dgcatra** a este proyecto, manteniendo **intacta la IA** (Groq NLP multi-turno) y el **modelo de dominio** (roles/sectores, sin "bases").
 
@@ -308,11 +308,18 @@ Se va a portar la arquitectura y las mejoras de **bot-dgcatra** a este proyecto,
 
 ### Decisiones confirmadas
 
-- **Login**: portar OTP por WhatsApp + código maestro (multi-admin con superAdmin).
-- **Frontend**: migrar a layout multipágina (sidebar + páginas), igual a dgcatra.
-- **Chat takeover**: portar completo.
-- **Dominio**: mantener roles de norbridge (no migrar a `Sector.isAdmin`).
+- **Login**: OTP por WhatsApp + código maestro (multi-admin con superAdmin).
+- **Frontend**: multipágina con sidebar (Inicio, Tickets, Detalle, Roles, Sectores, Usuarios, Configuración).
+- **Chat takeover**: completo.
+- **Dominio**: se mantienen los roles de norbridge (no se migró a `Sector.isAdmin`).
+- **IA**: intacta (Groq NLP multi-turno en `groq.ts`).
 
 ### Punto de retorno
 
 Antes de empezar se hizo un **backup lógico de la DB** (ver sección "Backup") y un **commit checkpoint** con tag `pre-paridad` en `main`.
+
+### Notas de la migración
+
+- El login del dashboard pasó de contraseña (`ADMIN_PASSWORD`) a **OTP por WhatsApp + código maestro** (`MASTER_CODE` / `SUPER_ADMIN_PHONE` en `.env`).
+- El historial de los tickets mantiene el formato norbridge `{ fecha, autor, nota }`.
+- `session.ts` (caché LRU de dgcatra) no se portó: norbridge ya hace 1 `findByPk` por mensaje y cachear el `context` arriesgaría servir `historialConversacion` desactualizado a la IA.
