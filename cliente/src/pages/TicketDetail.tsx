@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/useSocket';
 import {
   ClipboardCheck, CircleCheckBig, UserPlus, RotateCcw, User,
-  MapPin, Calendar, Clock, UserCheck, ArrowLeft, MessageCircle, Send,
+  MapPin, Calendar, Clock, UserCheck, ArrowLeft, MessageCircle, MessageSquare, Send,
 } from 'lucide-react';
 import { api } from '../api/client';
 import ConfirmButton from '../components/ConfirmButton';
@@ -13,7 +13,7 @@ interface Ticket {
   id: number; asunto: string; descripcion: string; ubicacion: string;
   estado: string; prioridad: string; origen: string;
   tecnicoAsignado: string | null; solucion: string | null;
-  historial: any[]; createdAt: string;
+  historial: any[]; comentarios: any[]; createdAt: string;
   autor: { nombreCompleto: string | null; telefono: string; rol?: { nombre: string } | null } | null;
 }
 
@@ -49,7 +49,9 @@ export default function TicketDetail() {
   const ticketRef = useRef(ticket);
   useEffect(() => { ticketRef.current = ticket; }, [ticket]);
   const [conversacion, setConversacion] = useState<Msg[]>([]);
-  const [tab, setTab] = useState<'historial' | 'chat'>('historial');
+  const [tab, setTab] = useState<'historial' | 'comentarios' | 'chat'>('historial');
+  const [comentarioInput, setComentarioInput] = useState('');
+  const [comentarioEnviando, setComentarioEnviando] = useState(false);
 
   const [chatActivo, setChatActivo] = useState(false);
   const [chatAdminNombre, setChatAdminNombre] = useState('');
@@ -186,6 +188,18 @@ export default function TicketDetail() {
     finally { setChatLoading(false); }
   }
 
+  async function agregarComentario() {
+    const texto = comentarioInput.trim();
+    if (!texto || comentarioEnviando) return;
+    setComentarioEnviando(true);
+    setError('');
+    try {
+      setTicket(await api.patch<Ticket>(`/api/tickets/${id}`, { nuevaNota: texto }));
+      setComentarioInput('');
+    } catch (e: any) { setError(e.message); }
+    finally { setComentarioEnviando(false); }
+  }
+
   if (loading) return <div className="empty"><span className="spinner" /><br />Cargando ticket...</div>;
   if (!ticket) return <p className="empty">Ticket no encontrado</p>;
 
@@ -194,6 +208,7 @@ export default function TicketDetail() {
   const puedeReabrir = user?.superAdmin && ticket.estado === 'cerrado';
   const soyElTecnico = ticket.tecnicoAsignado && ticket.tecnicoAsignado === (user?.nombre || user?.telefono);
   const historial: any[] = Array.isArray(ticket.historial) ? [...ticket.historial].reverse() : [];
+  const comentarios: any[] = Array.isArray(ticket.comentarios) ? [...ticket.comentarios].reverse() : [];
 
   return (
     <div style={{ maxWidth: 780, margin: '0 auto' }}>
@@ -350,6 +365,9 @@ export default function TicketDetail() {
           <button onClick={() => setTab('historial')} style={{ flex: 1, padding: '.8rem', border: 'none', background: tab === 'historial' ? 'var(--surface)' : 'var(--bg)', fontWeight: 600, fontSize: '.9rem', cursor: 'pointer', color: tab === 'historial' ? 'var(--text)' : 'var(--text-secondary)', borderBottom: tab === 'historial' ? '2px solid var(--primary)' : '2px solid transparent' }}>
             <Clock size={14} style={{ marginBottom: -2, marginRight: 6 }} /> Historial
           </button>
+          <button onClick={() => setTab('comentarios')} style={{ flex: 1, padding: '.8rem', border: 'none', background: tab === 'comentarios' ? 'var(--surface)' : 'var(--bg)', fontWeight: 600, fontSize: '.9rem', cursor: 'pointer', color: tab === 'comentarios' ? 'var(--text)' : 'var(--text-secondary)', borderBottom: tab === 'comentarios' ? '2px solid var(--primary)' : '2px solid transparent' }}>
+            <MessageSquare size={14} style={{ marginBottom: -2, marginRight: 6 }} /> Comentarios
+          </button>
           <button onClick={() => setTab('chat')} style={{ flex: 1, padding: '.8rem', border: 'none', background: tab === 'chat' ? 'var(--surface)' : 'var(--bg)', fontWeight: 600, fontSize: '.9rem', cursor: 'pointer', color: tab === 'chat' ? 'var(--text)' : 'var(--text-secondary)', borderBottom: tab === 'chat' ? '2px solid var(--primary)' : '2px solid transparent' }}>
             <MessageCircle size={14} style={{ marginBottom: -2, marginRight: 6 }} /> Conversación
           </button>
@@ -374,6 +392,32 @@ export default function TicketDetail() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'comentarios' && (
+          <div style={{ display: 'flex', flexDirection: 'column', height: 420 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+              {comentarios.length === 0 && (
+                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem', fontSize: '.85rem' }}>No hay comentarios todavía.</p>
+              )}
+              {comentarios.map((c, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ maxWidth: '80%', padding: '.6rem .8rem', borderRadius: 12, background: '#f1f5f9', color: 'var(--text)', fontSize: '.88rem', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '.75rem', color: 'var(--text-secondary)', marginBottom: '.15rem' }}>{c.autor} · {c.fecha}</div>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{c.texto}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {user?.esAdmin && (
+              <div style={{ display: 'flex', gap: '.5rem', padding: '.8rem 1rem', borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
+                <input value={comentarioInput} onChange={e => setComentarioInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarComentario()} placeholder="Escribí un comentario..." style={{ flex: 1, padding: '.5rem .7rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '.9rem' }} />
+                <button className="btn btn-primary btn-sm" onClick={agregarComentario} disabled={!comentarioInput.trim() || comentarioEnviando}>
+                  {comentarioEnviando ? <span className="spinner spinner-sm" /> : <Send size={16} />}
+                </button>
               </div>
             )}
           </div>

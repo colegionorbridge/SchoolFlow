@@ -14,9 +14,13 @@ export class Ticket extends Model<InferAttributes<Ticket>, InferCreationAttribut
   declare tecnicoAsignado: string | null;
   declare solucion: string | null;
   
-  // Campo para guardar comentarios, notas de Alejandro o logs del bot
+  // Historial de eventos (cambios de estado, asignaciones, etc.)
   // Se guarda como un array de objetos: [{ fecha: string, autor: string, nota: string }]
   declare historial: CreationOptional<any[]>; 
+
+  // Comentarios del ticket (separados del historial de eventos)
+  // Se guarda como un array de objetos: [{ fecha: string, autor: string, texto: string }]
+  declare comentarios: CreationOptional<any[]>; 
 
   // Timestamps automáticos de Sequelize
   declare createdAt: CreationOptional<Date>;
@@ -70,7 +74,13 @@ Ticket.init({
     type: DataTypes.JSON,
     defaultValue: [],
     allowNull: true,
-    comment: 'Almacena un array de comentarios o seguimiento del ticket'
+    comment: 'Historial de eventos del ticket'
+  },
+  comentarios: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    allowNull: true,
+    comment: 'Comentarios del ticket: [{ fecha, autor, texto }]'
   },
   createdAt: DataTypes.DATE,
   updatedAt: DataTypes.DATE,

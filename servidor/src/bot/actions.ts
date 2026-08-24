@@ -67,13 +67,22 @@ export async function ejecutarAccion(
                 try { historialActual = JSON.parse(ticket.historial); } catch { historialActual = []; }
             }
 
-            const nuevaNota = {
-                fecha: new Date().toLocaleString('es-AR'),
-                autor: user.nombreCompleto || 'Usuario',
-                nota: ticketData.comentario || (accion === 'CERRAR_TICKET' ? "Ticket cerrado por el usuario." : "Nota anadida por el usuario.")
-            };
+            const autor = user.nombreCompleto || 'Usuario';
+            const fecha = new Date().toLocaleString('es-AR');
 
-            ticket.historial = [...historialActual, nuevaNota];
+            if (accion === 'AGREGAR_COMENTARIO') {
+                // Comentario → campo `comentarios` + evento en el historial
+                const comentariosActual = Array.isArray(ticket.comentarios) ? ticket.comentarios : [];
+                ticket.comentarios = [...comentariosActual, { fecha, autor, texto: ticketData.comentario || '' }];
+                ticket.changed('comentarios', true);
+                historialActual.push({ fecha, autor, nota: `${autor} agregó un comentario` });
+            } else {
+                // Cierre → evento en el historial
+                historialActual.push({ fecha, autor, nota: 'Ticket cerrado por el usuario.' });
+            }
+
+            ticket.historial = [...historialActual];
+            ticket.changed('historial', true);
             if (accion === 'CERRAR_TICKET') ticket.estado = 'cerrado';
 
             await ticket.save();

@@ -168,7 +168,11 @@ export async function update(req: AuthRequest, res: Response) {
     }
 
     if (nuevaNota && nuevaNota.trim() !== '') {
-      pushNota(nuevaNota.trim());
+      const comentarios: any[] = Array.isArray(ticket.comentarios) ? ticket.comentarios : [];
+      comentarios.push({ fecha: new Date().toLocaleString('es-AR'), autor, texto: nuevaNota.trim() });
+      pushNota(`${autor} agregó un comentario`);
+      ticket.comentarios = comentarios;
+      ticket.changed('comentarios', true);
     }
 
     ticket.historial = historial;

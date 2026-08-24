@@ -32,6 +32,23 @@ const getHistorial = (ticket: any): any[] => {
     return [];
 };
 
+/**
+ * Normaliza los comentarios del ticket (campo separado del historial).
+ */
+const getComentarios = (ticket: any): any[] => {
+    if (!ticket.comentarios) return [];
+    if (Array.isArray(ticket.comentarios)) return ticket.comentarios;
+    if (typeof ticket.comentarios === 'string') {
+        try {
+            const parsed = JSON.parse(ticket.comentarios);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};
+
 export const processCommand = async (msg: any, user: any): Promise<CommandResult> => {
     const texto = msg.body.trim();
     const textoLower = texto.toLowerCase();
@@ -101,8 +118,8 @@ Tambien podes:
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : '🔵';
             const fecha = new Date(t.createdAt).toLocaleString('es-AR');
-            const historial = getHistorial(t);
-            const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
+            const comentariosArr = getComentarios(t);
+            const comentarios = comentariosArr.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
             return `${emoji} *Ticket #${t.id}*\n📌 *Asunto:* ${t.asunto}\n📍 *Ubicación:* ${t.ubicacion}\n🕒 *Creado:* ${fecha}\n${comentarios}`;
         }).join('\n\n');
         
@@ -127,8 +144,8 @@ Tambien podes:
         const lista = tickets.map(t => {
             const emoji = t.estado === 'abierto' ? '🟠' : t.estado === 'en_proceso' ? '🔵' : '🟢';
             const fecha = new Date(t.createdAt).toLocaleString('es-AR');
-            const historial = getHistorial(t);
-            const comentarios = historial.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
+            const comentariosArr = getComentarios(t);
+            const comentarios = comentariosArr.length > 0 ? '💬 Con comentarios' : '📭 Sin comentarios';
             return `${emoji} *Ticket #${t.id}*\n📌 *Asunto:* ${t.asunto}\n📍 *Ubicación:* ${t.ubicacion}\n🕒 *Creado:* ${fecha}\n${comentarios}`;
         }).join('\n\n');
 
@@ -185,18 +202,18 @@ Tambien podes:
             return { handled: true, reply: `No se encontro el ticket #${ticketId}.` };
         }
 
-        const historial = getHistorial(ticket);
-        if (historial.length === 0) {
-            return { handled: true, reply: `El ticket *#${ticket.id}* no tiene notas registradas.` };
+        const comentarios = getComentarios(ticket);
+        if (comentarios.length === 0) {
+            return { handled: true, reply: `El ticket *#${ticket.id}* no tiene comentarios.` };
         }
 
-        const notasTexto = historial.map((h: any, i: number) =>
-            `*${i + 1}.* ${h.autor} (${h.fecha}):\n${h.nota}`
+        const notasTexto = comentarios.map((c: any, i: number) =>
+            `*${i + 1}.* ${c.autor} (${c.fecha}):\n${c.texto}`
         ).join('\n\n');
 
         return {
             handled: true,
-            reply: `📋 *Historial del ticket #${ticket.id}*: "${ticket.asunto}"
+            reply: `📋 *Comentarios del ticket #${ticket.id}*: "${ticket.asunto}"
 
 ${notasTexto}`
         };
@@ -215,18 +232,18 @@ ${notasTexto}`
             return { handled: true, reply: `No se encontro el ticket #${ticketId}.` };
         }
 
-        const historial = getHistorial(ticket);
-        if (historial.length === 0) {
-            return { handled: true, reply: `El ticket *#${ticket.id}* no tiene notas registradas.` };
+        const comentarios = getComentarios(ticket);
+        if (comentarios.length === 0) {
+            return { handled: true, reply: `El ticket *#${ticket.id}* no tiene comentarios.` };
         }
 
-        const notasTexto = historial.map((h: any, i: number) =>
-            `*${i + 1}.* ${h.autor} (${h.fecha}):\n${h.nota}`
+        const notasTexto = comentarios.map((c: any, i: number) =>
+            `*${i + 1}.* ${c.autor} (${c.fecha}):\n${c.texto}`
         ).join('\n\n');
 
         return {
             handled: true,
-            reply: `📋 *Historial del ticket #${ticket.id}*: "${ticket.asunto}"
+            reply: `📋 *Comentarios del ticket #${ticket.id}*: "${ticket.asunto}"
 
 ${notasTexto}`
         };
@@ -364,13 +381,13 @@ ${notasTexto}`
         }
 
         const historial = getHistorial(ticket);
-        const nuevaNota = {
-            fecha: new Date().toLocaleString('es-AR'),
-            autor: user.nombreCompleto || 'Usuario',
-            nota: resto
-        };
+        const comentarios = getComentarios(ticket);
+        const fecha = new Date().toLocaleString('es-AR');
+        const autor = user.nombreCompleto || 'Usuario';
 
-        ticket.historial = [...historial, nuevaNota];
+        ticket.comentarios = [...comentarios, { fecha, autor, texto: resto }];
+        ticket.changed('comentarios', true);
+        ticket.historial = [...historial, { fecha, autor, nota: `${autor} agregó un comentario` }];
         ticket.changed('historial', true);
         await ticket.save();
 

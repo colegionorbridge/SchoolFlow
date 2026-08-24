@@ -1,5 +1,14 @@
 # Tareas - bot-norbridge
 
+## 2026-08-24 — Comentarios separados del historial
+
+- [x] **Modelo `Ticket`**: agregado campo `comentarios` (JSON, `[{ fecha, autor, texto }]`).
+- [x] **Backend**: `tickets.controller.update` (`nuevaNota` → `comentarios` + evento `"{autor} agregó un comentario"` en `historial`); `bot/actions.ts` (`AGREGAR_COMENTARIO` → `comentarios` + evento); `bot/commands.ts` ("ticket #N [comentario]" → `comentarios`; `/comentarios` y "ver comentarios del N" leen `comentarios`).
+- [x] **Frontend `TicketDetail`**: 3 solapas — Historial (solo eventos) · Comentarios (texto completo + input) · Conversación (chat).
+- Nota: tickets viejos **no migrados** (quedan con el historial mezclado como estaban; solo lo nuevo va limpio).
+
+---
+
 ## 2026-08-24 — Fixes y mejoras post-deploy
 
 - [x] **Historial de conversación**: al crear un ticket por WhatsApp, los mensajes recientes (`conversaciones` con `ticketId NULL`) se asocian al ticket en `bot/actions.ts` (`Conversacion.update`). Backfill manual del ticket #200 (7 mensajes).
