@@ -4,6 +4,9 @@ import qrcode from 'qrcode-terminal';
 import { handleIncomingMessage } from './handler.js';
 import { setBotConnected, setBotDisconnected, emitQR } from '../socket/server.js';
 import { logger } from '../config/logger.js';
+import { setClient, registrarChatId, simularEscritura, rateLimitar } from './enviar.js';
+import { guardarMensaje } from './historial.js';
+import { User } from '../models/models.js';
 
 const client = new Client({
     authStrategy: new LocalAuth({
@@ -24,6 +27,8 @@ const client = new Client({
         ],
     }
 });
+
+setClient(client);
 
 let reintentos = 0;
 const MAX_REINTENTOS = 5;
@@ -91,45 +96,62 @@ setTimeout(() => {
     }
 }, 90000);
 
-const lastSend = new Map<string, number>();
-const RATE_LIMIT_MS = 2000;
+// Cola FIFO por usuario: garantiza orden de procesamiento sin pisarse entre mensajes.
+const colas = new Map<string, Promise<void>>();
 
-function rateLimitar(telefono: string): Promise<void> {
-    const now = Date.now();
-    const ultimo = lastSend.get(telefono) || 0;
-    const espera = RATE_LIMIT_MS - (now - ultimo);
-    if (espera > 0) {
-        return new Promise(r => setTimeout(r, espera));
+function encolar(telefono: string, fn: () => Promise<void>): Promise<void> {
+    const anterior = colas.get(telefono) || Promise.resolve();
+    const tarea = anterior.then(() => fn()).catch(e => {
+        logger.error({ err: e?.message || e }, `Error en cola de ${telefono}`);
+    }).finally(() => {
+        if (colas.get(telefono) === tarea) colas.delete(telefono);
+    });
+    colas.set(telefono, tarea);
+    return tarea;
+}
+
+async function marcarComoLeido(msg: any) {
+    try {
+        const chat = await msg.getChat();
+        await chat.sendSeen();
+    } catch {}
+}
+
+async function procesarMensaje(msg: any, telefono: string) {
+    await marcarComoLeido(msg);
+
+    if (msg.hasMedia) {
+        await msg.reply(
+            '📎 Recibí tu archivo, pero todavía no puedo procesar imágenes ni audios.\n\n' +
+            'Describí el problema por texto así puedo crear el ticket.\n\n' +
+            'Escribí *cancelar* para salir.'
+        );
+        return;
     }
-    return Promise.resolve();
+
+    await handleIncomingMessage(msg);
 }
 
 client.on('message', async (msg: any) => {
+    if (msg.from === 'status@broadcast') return;
     const telefono = (String(msg.from).split('@')[0] ?? '').replace(/[^\d]/g, '');
+
+    registrarChatId(telefono, String(msg.from));
+    User.update({ chatId: String(msg.from) }, { where: { telefono } })
+        .catch(e => logger.error({ err: e?.message }, 'update chatId'));
+
     const replyOriginal = msg.reply.bind(msg) as Function;
     msg.reply = async (content: any) => {
         const chatId = String(msg.from);
-        try {
-            await (client as any).pupPage.evaluate(async (id: string) => {
-                const WidFactory = window.require('WAWebWidFactory');
-                const ChatState = window.require('WAWebChatStateBridge');
-                await ChatState.sendChatStateComposing(WidFactory.createWid(id));
-            }, chatId);
-            const texto = typeof content === 'string' ? content : String(content || '');
-            const typingDelay = 1500 + texto.length * 12 + Math.random() * 2000;
-            await new Promise(r => setTimeout(r, typingDelay));
-        } catch (e: any) {
-            logger.warn({ err: e?.message }, 'Error al simular escritura');
-            const fallbackDelay = 1500 + Math.random() * 2000;
-            await new Promise(r => setTimeout(r, fallbackDelay));
-        }
+        const texto = typeof content === 'string' ? content : String(content || '');
+        await simularEscritura(chatId, texto);
         await rateLimitar(telefono);
-        lastSend.set(telefono, Date.now());
-        return replyOriginal(content);
+        await replyOriginal(content);
+        guardarMensaje(telefono, texto, 'outbound');
     };
 
     logger.info(`📩 Mensaje de ${msg.from}: ${msg.body}`);
-    await handleIncomingMessage(msg);
+    encolar(telefono, () => procesarMensaje(msg, telefono));
 });
 
 function clientReady(): boolean {

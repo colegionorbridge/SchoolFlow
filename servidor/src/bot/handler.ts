@@ -7,6 +7,7 @@ import { ejecutarAccion } from './actions.js';
 import { getIO } from '../socket/server.js';
 import { client, clientReady } from './whatsapp.js';
 import { logger } from '../config/logger.js';
+import { guardarMensaje } from './historial.js';
 
 // Escudo anti-duplicados: evita que reconexiones o re-emisiones
 // de whatsapp-web.js procesen el mismo mensaje dos veces.
@@ -121,6 +122,8 @@ export const handleIncomingMessage = async (msg: any) => {
         if (!telefono.startsWith('549')) {
             telefono = '549' + telefono;
         }
+
+        guardarMensaje(telefono, msg.body || '', 'inbound');
 
         user = await User.findByPk(telefono, {
             include: [
