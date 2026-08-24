@@ -11,6 +11,8 @@ export class Ticket extends Model<InferAttributes<Ticket>, InferCreationAttribut
   declare prioridad: CreationOptional<'baja' | 'media' | 'alta'>;
   declare origen: CreationOptional<'whatsapp' | 'manual'>;
   declare userTelefono: string;
+  declare tecnicoAsignado: string | null;
+  declare solucion: string | null;
   
   // Campo para guardar comentarios, notas de Alejandro o logs del bot
   // Se guarda como un array de objetos: [{ fecha: string, autor: string, nota: string }]
@@ -55,6 +57,14 @@ Ticket.init({
     type: DataTypes.STRING,
     allowNull: true,
     comment: 'FK a usuarios.telefono. NULL para tickets manuales.',
+  },
+  tecnicoAsignado: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  solucion: {
+    type: DataTypes.TEXT,
+    allowNull: true,
   },
   historial: {
     type: DataTypes.JSON,

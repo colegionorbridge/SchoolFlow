@@ -4,6 +4,7 @@ import type { InferAttributes, InferCreationAttributes, CreationOptional } from 
 
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare telefono: string;
+  declare chatId: string | null;
   declare nombreCompleto: string | null;
   declare email: string | null;
   declare roleId: number | null;
@@ -25,6 +26,10 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   telefono: {
     type: DataTypes.STRING,
     primaryKey: true,
+  },
+  chatId: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
   nombreCompleto: {
     type: DataTypes.STRING,

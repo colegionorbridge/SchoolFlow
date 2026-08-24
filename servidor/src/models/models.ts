@@ -4,6 +4,7 @@ import { Sector } from './Sector.js';
 import { Role } from './Role.js';
 import { UserSector } from './UserSector.js';
 import { Ticket } from './Ticket.js'; // <--- Importamos el nuevo modelo
+import { Conversacion } from './Conversacion.js';
 
 /**
  * CONFIGURACIÓN DE RELACIONES
@@ -38,11 +39,20 @@ Ticket.belongsTo(User, {
   as: 'autor'
 });
 
+// 4. Relación Usuario - Conversacion (Uno a Muchos)
+User.hasMany(Conversacion, { foreignKey: 'userTelefono', as: 'conversaciones' });
+Conversacion.belongsTo(User, { foreignKey: 'userTelefono', as: 'usuario' });
+
+// 5. Relación Ticket - Conversacion (Uno a Muchos)
+Ticket.hasMany(Conversacion, { foreignKey: 'ticketId', as: 'conversaciones' });
+Conversacion.belongsTo(Ticket, { foreignKey: 'ticketId', as: 'ticket' });
+
 export {
   sequelize,
   User,
   Sector,
   Role,
   UserSector,
-  Ticket // <--- Exportamos Ticket para usarlo en el Bot
+  Ticket, // <--- Exportamos Ticket para usarlo en el Bot
+  Conversacion
 };
