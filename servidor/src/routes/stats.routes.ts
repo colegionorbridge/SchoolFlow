@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth.js';
 import {
   getResumen,
   getPorSector,
@@ -7,10 +8,11 @@ import {
 } from '../controllers/stats.controller.js';
 
 const router: Router = Router();
+router.use(authMiddleware);
 
-router.get('/stats/resumen', getResumen);
-router.get('/stats/por-sector', getPorSector);
-router.get('/stats/por-mes', getPorMes);
-router.get('/stats/usuarios-top', getUsuariosTop);
+router.get('/resumen', getResumen);
+router.get('/por-sector', getPorSector);
+router.get('/por-mes', getPorMes);
+router.get('/usuarios-top', getUsuariosTop);
 
 export default router;

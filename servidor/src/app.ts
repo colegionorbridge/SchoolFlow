@@ -1,13 +1,14 @@
 import express, { type Application, type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dashboardRoutes from './routes/dashboard.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import usuariosRoutes from './routes/usuarios.routes.js';
+import sectoresRoutes from './routes/sectores.routes.js';
+import rolesRoutes from './routes/roles.routes.js';
+import ticketsRoutes from './routes/tickets.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 import statsRoutes from './routes/stats.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
-import chatRoutes from './routes/chat.routes.js';
-import { authMiddleware } from './middleware/auth.js';
-import { adminMiddleware } from './middleware/admin.js';
 import { config } from './config/index.js';
 import { logger } from './config/logger.js';
 
@@ -46,19 +47,20 @@ app.get('/health/bot', (_req, res) => {
 // 3. Rutas de autenticación (públicas)
 app.use('/api/auth', authRoutes);
 
-// 4. Rutas de chat takeover (protegidas + solo admin) — antes que dashboard para /tickets/:id/...
-app.use('/api/tickets', authMiddleware, adminMiddleware, chatRoutes);
+// 4. Rutas de chat takeover (auth + admin)
+app.use('/api/tickets', chatRoutes);
 
-// 5. Rutas protegidas del dashboard (requieren JWT)
-app.use('/api', authMiddleware, dashboardRoutes);
+// 5. Rutas de tickets (auth; PATCH admin)
+app.use('/api/tickets', ticketsRoutes);
 
-// 6. Rutas de estadísticas (protegidas)
-app.use('/api', authMiddleware, statsRoutes);
+// 6. Resto de rutas protegidas (self-contained)
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/sectores', sectoresRoutes);
+app.use('/api/roles', rolesRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/settings', settingsRoutes);
 
-// 7. Rutas de configuración (protegidas + solo admin)
-app.use('/api/settings', authMiddleware, adminMiddleware, settingsRoutes);
-
-// 8. Global Error Handler
+// 7. Global Error Handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err: err.message }, 'Error no manejado');
   res.status(500).json({ error: 'Error interno del servidor' });

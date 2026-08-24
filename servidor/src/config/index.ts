@@ -16,5 +16,6 @@ export const config = {
   },
   adminPassword: process.env.ADMIN_PASSWORD || '',
   masterCode: process.env.MASTER_CODE || '',
+  superAdminPhone: process.env.SUPER_ADMIN_PHONE || '',
   frontendUrl: process.env.FRONTEND_URL || 'https://school-flow-inky.vercel.app',
 };

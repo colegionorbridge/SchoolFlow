@@ -1,8 +1,12 @@
 import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth.js';
+import { adminMiddleware } from '../middleware/admin.js';
 import { getMasterCode, setMasterCode, limpiarDB } from '../controllers/settings.controller.js';
 import { logger } from '../config/logger.js';
 
 const router = Router();
+router.use(authMiddleware);
+router.use(adminMiddleware);
 
 router.get('/master-code', getMasterCode);
 router.patch('/master-code', setMasterCode);
