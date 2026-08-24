@@ -123,14 +123,32 @@ export const handleIncomingMessage = async (msg: any) => {
             telefono = '549' + telefono;
         }
 
-        guardarMensaje(telefono, msg.body || '', 'inbound');
-
         user = await User.findByPk(telefono, {
             include: [
                 { model: Role, as: 'rol' }, 
                 { model: Sector, as: 'sectores' }
             ]
         });
+
+        // Chat con admin activo → forwardear mensajes al dashboard, NO procesar con IA
+        const chatAdmin = (user && user.context?.chatConAdmin) || null;
+        if (chatAdmin?.adminId) {
+            const ticketReciente = await Ticket.findOne({
+                where: { userTelefono: telefono },
+                order: [['createdAt', 'DESC']],
+            }).catch(() => null);
+            guardarMensaje(telefono, msg.body || '', 'inbound', ticketReciente?.id);
+
+            getIO()?.emit('chat-mensaje-entrante', {
+                userTelefono: telefono,
+                mensaje: msg.body || '(multimedia)',
+                timestamp: new Date().toISOString(),
+                adminId: chatAdmin.adminId,
+            });
+            return;
+        }
+
+        guardarMensaje(telefono, msg.body || '', 'inbound');
 
         // Historial de conversación para la IA (solo si el usuario existe)
         const historialConversacion = (user && user.context?.historialConversacion) || [];
