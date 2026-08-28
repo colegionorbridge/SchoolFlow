@@ -1,5 +1,24 @@
 # Tareas - bot-norbridge
 
+## 2026-08-28 — Alucinación con "cancelar" + confirmaciones por palabra
+
+### Fix "cancelar" sin alucinar (commit `dec6f93`)
+
+El bot respondió "no se creó ningún ticket" cuando el ticket #211 sí se había creado. Causa: "cancelar" no lo capturaba ningún comando determinista y caía a Groq, que inventó el estado.
+
+- [x] **`groq.ts` (prompt)**: reglas para intención "cancelar/interrumpir/cerrar" (`cancelar`, `anular`, `ya se arregló`, `solucionado`, `no lo necesito más`, etc.): 0 abiertos → "no tenés tickets abiertos"; 1 abierto → `CERRAR_TICKET` con ese id (dispara confirmación SI/NO ya existente); varios → pregunta cuál.
+- [x] **`handler.ts` (confirmaciones)**: matcheo por **palabra** con `coincide()` (no más `.includes`, que hacía que "si" matcheara "sistema" y "no" matcheara "notebook").
+  - `confirma`: `si, sí, confirmo, confirmar, dale, ok, perfecto, claro, de una, vamos, hagamoslo`.
+  - `cancela`: `no, cancelo, cancelar, mejor no, no quiero, al final no, no gracias, dejalo, abortar, me arrepentí, ya esta, se arreglo, solucionado, resuelto, listo`.
+- [x] **`helpers.ts`**: nueva función `coincide()` (boundary por palabra, ignora tildes y puntuación).
+- [x] **`actions.ts`**: setea `ticketData.id` real al crear el ticket, para que el historial registre `Ticket #N creado exitosamente` con número (antes quedaba vacío).
+
+### Nota de decisión
+
+- Las frases "ya está / se arregló / solucionado / resuelto / listo" se tratan como **cancelar** (el usuario las usa para interrumpir: "no crees el ticket, ya se resolvió"). Por eso van en `cancela`, no en `confirma`.
+
+---
+
 ## 2026-08-28 — Fix respuestas duplicadas + FK en historial + sesión 24h
 
 ### Fix respuestas duplicadas (commit `507d0e5`)

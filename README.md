@@ -331,3 +331,4 @@ Antes de empezar se hizo un **backup lógico de la DB** (ver sección "Backup") 
 - **Sesión del dashboard de 24h**: se eliminó el auto-logout por inactividad de 30 min (`INACTIVITY_TIMEOUT` = 24h, alineado con la expiración del JWT). Cualquier 401 redirige a `/login`.
 - **Fix respuestas duplicadas**: el bot ignora mensajes vacíos (ecos/reacciones) y propios (`fromMe`), que antes disparaban respuestas de IA duplicadas.
 - **Fix historial**: se usa el teléfono real (`getContact().number`) en lugar del LID, evitando violaciones de FK en `conversaciones`.
+- **Fix alucinación con "cancelar"**: la IA ahora maneja la intención de cancelar/interrumpir/cerrar (verifica tickets abiertos: 1 → confirma, varios → pregunta cuál, 0 → avisa). Las confirmaciones SI/NO matchean por palabra (no subcadena).
