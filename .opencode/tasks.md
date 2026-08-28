@@ -1,5 +1,26 @@
 # Tareas - bot-norbridge
 
+## 2026-08-28 — Fix respuestas duplicadas + FK en historial + sesión 24h
+
+### Fix respuestas duplicadas (commit `507d0e5`)
+
+El bot respondía dos veces lo mismo. Causa raíz (confirmada en logs y DB):
+
+- [x] **Mensajes vacíos**: `whatsapp.ts` ignora mensajes con `body` vacío (ecos, reacciones, indicadores) → antes cada uno disparaba una llamada a Groq y generaba respuestas duplicadas.
+- [x] **`fromMe`**: se ignora el mensaje si `msg.fromMe` (evita responder a los propios mensajes del bot).
+- [x] **Teléfono real vs LID**: `whatsapp.ts` resolvía el teléfono desde `msg.from` (LID `213223785636000`), distinto al `getContact().number` (`5491156243636`) que usa `handler.ts` → la FK de `conversaciones` fallaba y el historial de salida no se persistía. Ahora `whatsapp.ts` resuelve el teléfono real vía `getContact().number`.
+
+### Sesión del dashboard de 24h
+
+- [x] **`AuthContext.tsx`**: `INACTIVITY_TIMEOUT` 30 min → **24h** (alineado con la expiración del JWT).
+- [x] **`cliente/src/api/client.ts`**: cualquier 401 redirige a `/login` (token expirado o usuario eliminado), no solo `eliminado`.
+
+### Pendiente (documentado, no implementado)
+
+- [ ] El primer mensaje de un usuario **nuevo** (aún no registrado) da FK en `conversaciones` porque `guardarMensaje` corre antes de que `manejarRegistro` cree la fila en `usuarios`. No se tocó para no romper el flujo de registro.
+
+---
+
 ## 2026-08-24 — Asunto en los mensajes del bot
 
 - [x] Todo mensaje que referencia un ticket ahora incluye el asunto (`*Ticket #N*: "asunto"`): notificaciones de estado (`tickets.controller`), mensajes de chat (`chat.controller`) y confirmaciones del bot (`actions.ts`, `commands.ts`).

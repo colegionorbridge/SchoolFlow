@@ -23,9 +23,10 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { ...opts, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    if (res.status === 401 && body.error?.includes('eliminado')) {
+    if (res.status === 401) {
       localStorage.removeItem('norbridge_auth');
       window.location.href = '/login';
+      throw new ApiError(res.status, body.error || 'Sesión expirada');
     }
     throw new ApiError(res.status, body.error || `Error ${res.status}`);
   }

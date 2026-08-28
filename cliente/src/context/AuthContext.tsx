@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 
 const API = import.meta.env.VITE_API_URL || '';
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+const INACTIVITY_TIMEOUT = 24 * 60 * 60 * 1000; // 24h (coincide con la expiración del JWT)
 
 interface AuthState {
   telefono: string;

@@ -323,3 +323,11 @@ Antes de empezar se hizo un **backup lógico de la DB** (ver sección "Backup") 
 - El login del dashboard pasó de contraseña (`ADMIN_PASSWORD`) a **OTP por WhatsApp + código maestro** (`MASTER_CODE` / `SUPER_ADMIN_PHONE` en `.env`).
 - El historial de los tickets mantiene el formato norbridge `{ fecha, autor, nota }`.
 - `session.ts` (caché LRU de dgcatra) no se portó: norbridge ya hace 1 `findByPk` por mensaje y cachear el `context` arriesgaría servir `historialConversacion` desactualizado a la IA.
+
+---
+
+## Últimos cambios (2026-08-28)
+
+- **Sesión del dashboard de 24h**: se eliminó el auto-logout por inactividad de 30 min (`INACTIVITY_TIMEOUT` = 24h, alineado con la expiración del JWT). Cualquier 401 redirige a `/login`.
+- **Fix respuestas duplicadas**: el bot ignora mensajes vacíos (ecos/reacciones) y propios (`fromMe`), que antes disparaban respuestas de IA duplicadas.
+- **Fix historial**: se usa el teléfono real (`getContact().number`) en lugar del LID, evitando violaciones de FK en `conversaciones`.
