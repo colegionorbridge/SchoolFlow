@@ -29,6 +29,9 @@ export async function ejecutarAccion(
             historial: []
         });
 
+        // Registrar el id real en ticketData para que handler.ts arme el historial correcto
+        ticketData.id = nuevoTicket.id;
+
         logger.info({ ticketId: nuevoTicket.id }, '[ejecutarAccion] Ticket creado');
 
         // Asociar los mensajes recientes de la conversación al ticket recién creado

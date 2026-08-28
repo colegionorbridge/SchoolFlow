@@ -8,6 +8,7 @@ import { getIO } from '../socket/server.js';
 import { client, clientReady } from './whatsapp.js';
 import { logger } from '../config/logger.js';
 import { guardarMensaje } from './historial.js';
+import { coincide } from './helpers.js';
 
 // Escudo anti-duplicados: evita que reconexiones o re-emisiones
 // de whatsapp-web.js procesen el mismo mensaje dos veces.
@@ -199,9 +200,8 @@ export const handleIncomingMessage = async (msg: any) => {
                 await msg.reply('⏱️ Pasaron más de 10 minutos sin respuesta. La acción pendiente se canceló. Si querés realizarla, volvé a pedirla.');
                 return;
             } else {
-                const msgLower = msg.body.toLowerCase();
-                const confirma = ['si', 'sí', 'confirmo', 'dale', 'ok', 'vamos', 'hagamoslo', 'perfecto'].some(c => msgLower.includes(c));
-                const cancela = ['no', 'cancelo', 'mejor no', 'no quiero'].some(c => msgLower.includes(c));
+                const confirma = coincide(msg.body, ['si', 'sí', 'confirmo', 'confirmar', 'dale', 'ok', 'perfecto', 'claro', 'de una', 'vamos', 'hagamoslo']);
+                const cancela = coincide(msg.body, ['no', 'cancelo', 'cancelar', 'mejor no', 'no quiero', 'al final no', 'no gracias', 'dejalo', 'abortar', 'me arrepentí', 'ya esta', 'se arreglo', 'solucionado', 'resuelto', 'listo']);
 
                 // Obtener historial actual
                 const historialActual = user.context?.historialConversacion || [];
