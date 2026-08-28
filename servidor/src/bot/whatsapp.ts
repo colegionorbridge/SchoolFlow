@@ -134,7 +134,22 @@ async function procesarMensaje(msg: any, telefono: string) {
 
 client.on('message', async (msg: any) => {
     if (msg.from === 'status@broadcast') return;
-    const telefono = (String(msg.from).split('@')[0] ?? '').replace(/[^\d]/g, '');
+    if (msg.fromMe) return;
+
+    const body = (msg.body || '').trim();
+    // Ignorar mensajes vacíos (ecos, reacciones, indicadores) para no disparar
+    // respuestas de IA duplicadas. Los mensajes con media se procesan aparte.
+    if (!body && !msg.hasMedia) return;
+
+    // Resolver el teléfono REAL (para @lid, getContact devuelve el número real,
+    // no el LID) para mantener consistencia con handler.ts y la FK de conversaciones.
+    let telefono = (String(msg.from).split('@')[0] ?? '').replace(/[^\d]/g, '');
+    try {
+        const contacto = await msg.getContact();
+        if (contacto?.number) {
+            telefono = contacto.number.startsWith('549') ? contacto.number : '549' + contacto.number;
+        }
+    } catch {}
 
     registrarChatId(telefono, String(msg.from));
     User.update({ chatId: String(msg.from) }, { where: { telefono } })
