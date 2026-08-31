@@ -78,6 +78,7 @@ Sistema de tickets técnicos interno del Colegio Norbridge. El personal (docente
 |---|---|
 | **Typing indicator** | Inyección directa vía `client.pupPage.evaluate()` con `WAWebChatStateBridge.sendChatStateComposing()`. Delay proporcional: `1500 + texto.length * 12 + random(0-2000)` ms |
 | **Rate limit** | Máximo 1 mensaje saliente cada 2 segundos por usuario (`whatsapp.ts`) |
+| **Anti-loop** | Máximo 10 respuestas por número en 60s; al superarlo se bloquea por 5 min (`puedeResponder` en `enviar.ts`) |
 | **Deduplicación** | `Set<string>` con TTL 15s (`handler.ts`) |
 | **Read receipts** | — |
 | **Botones** | Texto con números (`*1.*`, `*2.*`) + parseo numérico (los `Buttons`/`List` nativos están deprecados por WhatsApp) |
@@ -179,7 +180,7 @@ También en lenguaje natural: "se arregló" / "ya funciona" para cerrar, "ticket
 | POST | /api/tickets | Crear ticket manual |
 | PATCH | /api/tickets/:id | Actualizar ticket (estado, prioridad, nota) + notificación WhatsApp |
 | GET | /api/usuarios | Listar usuarios |
-| PATCH | /api/usuarios/:telefono | Actualizar usuario (nombre, email, rol, sectores) |
+| PATCH | /api/usuarios/:telefono | Actualizar usuario (nombre, email, rol, sectores, activo, registroCompleto) |
 | GET | /api/roles | Listar roles |
 | POST | /api/roles | Crear rol |
 | PATCH | /api/roles/:id | Actualizar rol |
@@ -325,6 +326,12 @@ Antes de empezar se hizo un **backup lógico de la DB** (ver sección "Backup") 
 - `session.ts` (caché LRU de dgcatra) no se portó: norbridge ya hace 1 `findByPk` por mensaje y cachear el `context` arriesgaría servir `historialConversacion` desactualizado a la IA.
 
 ---
+
+## Últimos cambios (2026-08-31)
+
+- **Fix "desactivar usuario"**: el flag `activo` ahora se respeta en `handler.ts`. Un usuario desactivado desde el dashboard es ignorado por completo (no se le responde). Antes el flag se guardaba pero nunca se leía.
+- **Protección anti-loop**: nuevo `puedeResponder()` en `enviar.ts` limita a 10 respuestas por número en 60s (bloqueo de 5 min). Evita loops infinitos con otros bots/automatismos.
+- **Registro completo desde dashboard**: el modal de edición de usuarios tiene un checkbox "Registro completo" que setea `registroCompleto` y `pasoRegistro = 7` (y limpia el contexto de registro). Antes no se podía marcar como registrado.
 
 ## Últimos cambios (2026-08-28)
 

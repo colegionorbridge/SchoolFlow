@@ -84,7 +84,7 @@ export async function update(req: AuthRequest, res: Response) {
     const user = await User.findByPk(req.params.telefono as string);
     if (!user) return res.status(404).json({ error: 'No encontrado' });
 
-    const { nombreCompleto, email, roleId, sectores, activo } = req.body;
+    const { nombreCompleto, email, roleId, sectores, activo, registroCompleto } = req.body;
     const payload: Record<string, unknown> = { nombreCompleto, email, roleId, activo };
 
     if (req.body.esAdmin !== undefined) {
@@ -92,6 +92,17 @@ export async function update(req: AuthRequest, res: Response) {
         return res.status(403).json({ error: 'Solo un administrador puede cambiar permisos de admin' });
       }
       payload.esAdmin = req.body.esAdmin;
+    }
+
+    if (registroCompleto !== undefined) {
+      payload.registroCompleto = registroCompleto;
+      if (registroCompleto === true) {
+        payload.pasoRegistro = 7;
+        const contexto = (user.context && typeof user.context === 'object') ? { ...user.context } : {};
+        delete (contexto as any).registro;
+        delete (contexto as any).rolPendienteId;
+        payload.context = contexto;
+      }
     }
 
     await user.update(payload);

@@ -81,6 +81,34 @@ export async function rateLimitar(telefono: string): Promise<void> {
   lastSend.set(telefono, Date.now());
 }
 
+// --- Protección anti-loop: limita respuestas por número ---
+const VENTANA_MS = 60_000;          // ventana de 60 segundos
+const MAX_RESPUESTAS = 10;          // máx. respuestas por ventana
+const COOLDOWN_MS = 5 * 60 * 1000;  // 5 min de silencio tras superar el umbral
+
+const enviosRecientes = new Map<string, number[]>();
+const bloqueadosHasta = new Map<string, number>();
+
+export function puedeResponder(telefono: string): boolean {
+  const ahora = Date.now();
+  const hasta = bloqueadosHasta.get(telefono);
+
+  if (hasta && ahora < hasta) return false;
+  if (hasta && ahora >= hasta) bloqueadosHasta.delete(telefono);
+
+  const lista = (enviosRecientes.get(telefono) || []).filter(t => ahora - t < VENTANA_MS);
+  if (lista.length >= MAX_RESPUESTAS) {
+    bloqueadosHasta.set(telefono, ahora + COOLDOWN_MS);
+    enviosRecientes.delete(telefono);
+    logger.warn(`⏱️ [RateLimit] Bloqueado ${telefono} por ${COOLDOWN_MS / 60000} min (${MAX_RESPUESTAS} respuestas en 60s).`);
+    return false;
+  }
+
+  lista.push(ahora);
+  enviosRecientes.set(telefono, lista);
+  return true;
+}
+
 export async function enviarTexto(to: string, texto: string, ticketId?: number | null): Promise<boolean> {
   try {
     const chatId = await resolverChatId(to);

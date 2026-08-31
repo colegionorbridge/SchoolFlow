@@ -109,6 +109,7 @@ export default function UsuariosPage() {
         sectores: edit.sectores.map(s => s.id),
         esAdmin: edit.esAdmin,
         activo: edit.activo,
+        registroCompleto: edit.registroCompleto,
       });
       setEdit(null); await load();
     } catch (e: any) { setError(e.message); }
@@ -240,6 +241,10 @@ export default function UsuariosPage() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', cursor: 'pointer', fontWeight: 400 }}>
                 <input type="checkbox" checked={edit.activo} onChange={e => setEdit({ ...edit, activo: e.target.checked })} />
                 Activo
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', cursor: 'pointer', fontWeight: 400 }}>
+                <input type="checkbox" checked={edit.registroCompleto} onChange={e => setEdit({ ...edit, registroCompleto: e.target.checked })} />
+                Registro completo
               </label>
             </div>
             <div style={{ display: 'flex', gap: '.5rem' }}>

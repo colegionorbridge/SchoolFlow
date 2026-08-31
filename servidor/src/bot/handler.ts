@@ -9,6 +9,7 @@ import { client, clientReady } from './whatsapp.js';
 import { logger } from '../config/logger.js';
 import { guardarMensaje } from './historial.js';
 import { coincide } from './helpers.js';
+import { puedeResponder } from './enviar.js';
 
 // Escudo anti-duplicados: evita que reconexiones o re-emisiones
 // de whatsapp-web.js procesen el mismo mensaje dos veces.
@@ -130,6 +131,18 @@ export const handleIncomingMessage = async (msg: any) => {
                 { model: Sector, as: 'sectores' }
             ]
         });
+
+        // 🚫 Usuario desactivado desde el dashboard → ignorar por completo (rompe loops)
+        if (user && user.activo === false) {
+            logger.info(`🚫 [Bloqueado] Mensaje de ${telefono} ignorado (usuario inactivo).`);
+            return;
+        }
+
+        // ⏱️ Protección anti-loop: si este número superó el límite de respuestas, ignorar
+        if (!puedeResponder(telefono)) {
+            logger.info(`⏱️ [RateLimit] Mensaje de ${telefono} ignorado (límite de respuestas alcanzado).`);
+            return;
+        }
 
         // Chat con admin activo → forwardear mensajes al dashboard, NO procesar con IA
         const chatAdmin = (user && user.context?.chatConAdmin) || null;

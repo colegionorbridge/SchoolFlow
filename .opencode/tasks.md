@@ -1,5 +1,36 @@
 # Tareas - bot-norbridge
 
+## 2026-08-31 — Desactivar usuario no funcionaba + loop infinito con otro bot + registro desde dashboard
+
+### Problema
+
+1. Un bot externo (número de Tuenti `5491122864999`, renombrado "TUENTI") le escribía al bot y quedaban en **loop infinito**: el bot respondía "❌ Selección inválida..." (atrapado en `pasoRegistro = 2` del registro) y el otro bot volvía a responder, sin parar. En 1h: 54 inbound / 55 outbound.
+2. El admin desactivó al usuario desde el dashboard (`activo = false`) pero **el bot seguía respondiendo igual**.
+3. Desde el dashboard no se podía marcar a un usuario como "Registro completo": aunque se cargaban todos los datos, seguía en "Pendiente".
+
+### Causas raíz
+
+- **`activo` nunca se leía**: el flag se guarda (dashboard → `PATCH /api/usuarios/:telefono`) pero `handleIncomingMessage` (`bot/handler.ts`) jamás lo consultaba. Desactivar no tenía efecto sobre las respuestas del bot.
+- **Sin protección anti-loop**: no había ningún límite de respuestas por número; cada mensaje entrante (con `msgId` distinto) disparaba una respuesta nueva.
+- **`registroCompleto` no se podía escribir**: `usuarios.controller.update` solo guardaba `nombreCompleto, email, roleId, activo` (+`esAdmin`) y sectores; nunca `registroCompleto` ni `pasoRegistro`.
+
+### Fixes aplicados
+
+| Archivo | Cambio |
+|---------|--------|
+| `servidor/src/bot/handler.ts` | Guard de `activo`: si `user.activo === false`, se ignora el mensaje por completo (`🚫 [Bloqueado]`). Guard de rate-limit: si `puedeResponder(telefono)` devuelve `false`, se ignora (no gasta tokens de Groq ni responde). |
+| `servidor/src/bot/enviar.ts` | Nueva función `puedeResponder(telefono)`: cuenta respuestas por número en ventana de 60s (umbral `MAX_RESPUESTAS = 10`); al superarlo bloquea el número por `COOLDOWN_MS = 5 min`. Constantes configurables. |
+| `servidor/src/controllers/usuarios.controller.ts` | `update` acepta `registroCompleto`. Si es `true`: setea `pasoRegistro = 7` y limpia `context.registro` / `context.rolPendienteId`. |
+| `cliente/src/pages/admin/UsuariosPage.tsx` | Checkbox "Registro completo" en el modal de edición + se incluye `registroCompleto` en el PATCH. |
+
+### Deploy
+
+- Backend: `docker compose build chatbot && docker compose up -d chatbot` (el rebuild corta el loop al desplegar el guard de `activo`).
+- Frontend: redeploy en Vercel (`school-flow-inky.vercel.app`).
+- Verificación: logs deben mostrar `🚫 [Bloqueado] Mensaje de 5491122864999 ignorado` y `⏱️ [RateLimit] Bloqueado ...`.
+
+---
+
 ## 2026-08-28 — Alucinación con "cancelar" + confirmaciones por palabra
 
 ### Fix "cancelar" sin alucinar (commit `dec6f93`)
