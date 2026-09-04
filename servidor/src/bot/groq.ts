@@ -155,6 +155,7 @@ ${infoTickets}`;
                 model: "qwen/qwen3.6-27b",
                 messages: messages,
                 temperature: 0.2,
+                max_tokens: 800,
                 response_format: { type: "json_object" },
                 reasoning_effort: "none"
             })

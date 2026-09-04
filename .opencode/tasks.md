@@ -1,5 +1,38 @@
 # Tareas - bot-norbridge
 
+## 2026-09-04 — Bot no responde: Groq 429 OTPM (limit 1000)
+
+### Síntoma
+
+El bot dejó de responder el 4/9/2026. Recibía mensajes pero cada llamada a la IA fallaba y respondía el fallback genérico "tuve un error interno".
+
+### Causa raíz
+
+Groq empezó a aplicar un límite nuevo al plan gratuito (`on_demand`) para el modelo `qwen/qwen3.6-27b`: **OTPM (output tokens per minute) = 1000**. Como `groq.ts` **no setea `max_tokens`**, Groq estimaba ~1400-1600 tokens de salida por pedido (según el largo del historial) y rechazaba con:
+
+```
+429 rate_limit_exceeded — Request too large for model `qwen/qwen3.6-27b` ... on output tokens per minute (OTPM): Limit 1000, Requested 1411
+```
+
+El bot venía funcionando (1, 2 y 3 de sep sin errores). No hubo cambios de código (último cambio a `groq.ts`: 13-ago) ni de deploy (contenedor del 31-ago): fue un cambio de límites del lado de Groq. `bot-dgcatra` no se vio afectado porque sí setea `max_tokens: 30`.
+
+### Fix aplicado
+
+| Archivo | Cambio |
+|---------|--------|
+| `servidor/src/bot/groq.ts` | Agregado `max_tokens: 800` al body del fetch (por debajo del tope OTPM=1000, con margen). |
+
+### Deploy
+
+- Backend: `docker compose up --build -d chatbot` (rebuild, el contenedor corre desde `dist/`).
+- Verificación: `docker logs -f bot-norbridge-server` — no deben aparecer más `OTPM`/`429`.
+
+### Nota de decisión
+
+- Se eligió `max_tokens: 800` para quedar por debajo del tope gratuito. Si en el futuro varios usuarios escriben a la vez y vuelve a rozar 1000 tokens de salida/min, la alternativa es subir a **Dev Tier** en Groq (sube el OTPM). Con 800 alcanza para el uso actual (respuestas JSON de ~300-400 tokens).
+
+---
+
 ## 2026-08-31 — Desactivar usuario no funcionaba + loop infinito con otro bot + registro desde dashboard
 
 ### Problema

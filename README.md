@@ -327,6 +327,10 @@ Antes de empezar se hizo un **backup lógico de la DB** (ver sección "Backup") 
 
 ---
 
+## Últimos cambios (2026-09-04)
+
+- **Fix "bot no responde" (Groq 429 OTPM)**: Groq empezó a aplicar un límite de **OTPM (output tokens per minute) = 1000** en el plan gratuito para `qwen/qwen3.6-27b`. Como `groq.ts` no seteaba `max_tokens`, cada pedido estimaba ~1400-1600 tokens de salida y era rechazado. Se agregó `max_tokens: 800` al request, por debajo del tope. Si a futuro se vuelve a rozar el límite (muchos usuarios a la vez), subir a **Dev Tier** en Groq.
+
 ## Últimos cambios (2026-08-31)
 
 - **Fix "desactivar usuario"**: el flag `activo` ahora se respeta en `handler.ts`. Un usuario desactivado desde el dashboard es ignorado por completo (no se le responde). Antes el flag se guardaba pero nunca se leía.
